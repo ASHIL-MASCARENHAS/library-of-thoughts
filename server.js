@@ -60,6 +60,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Serve static files from the 'public' directory under the BASE_PATH
+// This means /libraryOfThoughts/css/styles.css will map to public/css/styles.css
 app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
 
 app.use(express.json());
@@ -140,15 +141,16 @@ const isAuthenticated = (req, res, next) => {
 };
 
 // --- Authentication Routes ---
-app.get(`${BASE_PATH}/login`, (req, res) => {
+// These routes are handled by the Express app directly, so they should be relative to its root ('/')
+app.get('/login', (req, res) => {
     res.render('login', { firebaseConfig: res.locals.firebaseConfig });
 });
 
-app.get(`${BASE_PATH}/register`, (req, res) => {
+app.get('/register', (req, res) => {
     res.render('register', { firebaseConfig: res.locals.firebaseConfig });
 });
 
-app.post(`${BASE_PATH}/sessionLogin`, async (req, res) => {
+app.post('/sessionLogin', async (req, res) => {
     const idToken = req.body.idToken;
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
 
@@ -168,7 +170,7 @@ app.post(`${BASE_PATH}/sessionLogin`, async (req, res) => {
     }
 });
 
-app.post(`${BASE_PATH}/sessionLogout`, async (req, res) => {
+app.post('/sessionLogout', async (req, res) => {
     res.clearCookie('__session');
     if (admin.apps.length && authAdmin && res.locals.user && res.locals.user.uid) {
         try {
@@ -182,18 +184,18 @@ app.post(`${BASE_PATH}/sessionLogout`, async (req, res) => {
 });
 
 // --- Main Routes ---
-// This route handles the root path of the serverless function (which is /libraryOfThoughts/ on the domain)
+// The root of the application as seen by the serverless function (which corresponds to /libraryOfThoughts/ on the public domain)
 app.get('/', (req, res) => {
     res.render('home', { user: res.locals.user });
 });
 
 // --- Content Overview Page ---
-app.get(`${BASE_PATH}/content`, isAuthenticated, (req, res) => {
+app.get('/content', isAuthenticated, (req, res) => {
     res.render('content', { user: res.locals.user });
 });
 
 // --- Liturgical Calendar Routes ---
-app.get(`${BASE_PATH}/liturgicalCalendar`, isAuthenticated, async (req, res) => {
+app.get('/liturgicalCalendar', isAuthenticated, async (req, res) => {
     const requestedDate = req.query.date || new Date().toISOString().slice(0, 10);
     const info = liturgicalData[requestedDate];
 
@@ -223,7 +225,7 @@ app.get(`${BASE_PATH}/liturgicalCalendar`, isAuthenticated, async (req, res) => 
 });
 
 // Adds a new daily reflection
-app.post(`${BASE_PATH}/liturgicalCalendar/reflect`, isAuthenticated, async (req, res) => {
+app.post('/liturgicalCalendar/reflect', isAuthenticated, async (req, res) => {
     const { date, description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -249,7 +251,7 @@ app.post(`${BASE_PATH}/liturgicalCalendar/reflect`, isAuthenticated, async (req,
 });
 
 // Displays the edit daily reflection page
-app.get(`${BASE_PATH}/liturgicalCalendar/reflect/edit/:id`, isAuthenticated, async (req, res) => {
+app.get('/liturgicalCalendar/reflect/edit/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -273,7 +275,7 @@ app.get(`${BASE_PATH}/liturgicalCalendar/reflect/edit/:id`, isAuthenticated, asy
 });
 
 // Updates a daily reflection
-app.post(`${BASE_PATH}/liturgicalCalendar/reflect/update/:id`, isAuthenticated, async (req, res) => {
+app.post('/liturgicalCalendar/reflect/update/:id', isAuthenticated, async (req, res) => {
     const { date, description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -303,7 +305,7 @@ app.post(`${BASE_PATH}/liturgicalCalendar/reflect/update/:id`, isAuthenticated, 
 });
 
 // Deletes a daily reflection
-app.post(`${BASE_PATH}/liturgicalCalendar/reflect/delete/:id`, isAuthenticated, async (req, res) => {
+app.post('/liturgicalCalendar/reflect/delete/:id', isAuthenticated, async (req, res) => {
     const redirectDate = req.query.date || new Date().toISOString().slice(0, 10);
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
@@ -328,7 +330,7 @@ app.post(`${BASE_PATH}/liturgicalCalendar/reflect/delete/:id`, isAuthenticated, 
 
 // --- Insights Routes ---
 // Displays the insights page
-app.get(`${BASE_PATH}/insights`, isAuthenticated, async (req, res) => {
+app.get('/insights', isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let insights = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -357,7 +359,7 @@ app.get(`${BASE_PATH}/insights`, isAuthenticated, async (req, res) => {
 });
 
 // Adds a new insight
-app.post(`${BASE_PATH}/insightsCreate`, isAuthenticated, async (req, res) => {
+app.post('/insightsCreate', isAuthenticated, async (req, res) => {
     const { description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -382,7 +384,7 @@ app.post(`${BASE_PATH}/insightsCreate`, isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit insight page
-app.get(`${BASE_PATH}/insights/edit/:id`, isAuthenticated, async (req, res) => {
+app.get('/insights/edit/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -402,7 +404,7 @@ app.get(`${BASE_PATH}/insights/edit/:id`, isAuthenticated, async (req, res) => {
 });
 
 // Updates an insight
-app.post(`${BASE_PATH}/insights/update/:id`, isAuthenticated, async (req, res) => {
+app.post('/insights/update/:id', isAuthenticated, async (req, res) => {
     const { description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -432,7 +434,7 @@ app.post(`${BASE_PATH}/insights/update/:id`, isAuthenticated, async (req, res) =
 });
 
 // Deletes an insight
-app.post(`${BASE_PATH}/insights/delete/:id`, isAuthenticated, async (req, res) => {
+app.post('/insights/delete/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -455,7 +457,7 @@ app.post(`${BASE_PATH}/insights/delete/:id`, isAuthenticated, async (req, res) =
 
 // --- Anecdotes Routes ---
 // Displays the anecdotes page
-app.get(`${BASE_PATH}/anecdotes`, isAuthenticated, async (req, res) => {
+app.get('/anecdotes', isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let anecdotes = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -485,7 +487,7 @@ app.get(`${BASE_PATH}/anecdotes`, isAuthenticated, async (req, res) => {
 });
 
 // Adds a new anecdote
-app.post(`${BASE_PATH}/anecdotes/create`, isAuthenticated, async (req, res) => {
+app.post('/anecdotes/create', isAuthenticated, async (req, res) => {
     const { title, content, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -511,7 +513,7 @@ app.post(`${BASE_PATH}/anecdotes/create`, isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit anecdote page
-app.get(`${BASE_PATH}/anecdotes/edit/:id`, isAuthenticated, async (req, res) => {
+app.get('/anecdotes/edit/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -531,7 +533,7 @@ app.get(`${BASE_PATH}/anecdotes/edit/:id`, isAuthenticated, async (req, res) => 
 });
 
 // Updates an anecdote
-app.post(`${BASE_PATH}/anecdotes/update/:id`, isAuthenticated, async (req, res) => {
+app.post('/anecdotes/update/:id', isAuthenticated, async (req, res) => {
     const { title, content, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -562,7 +564,7 @@ app.post(`${BASE_PATH}/anecdotes/update/:id`, isAuthenticated, async (req, res) 
 });
 
 // Deletes an anecdote
-app.post(`${BASE_PATH}/anecdotes/delete/:id`, isAuthenticated, async (req, res) => {
+app.post('/anecdotes/delete/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -585,7 +587,7 @@ app.post(`${BASE_PATH}/anecdotes/delete/:id`, isAuthenticated, async (req, res) 
 
 // --- Books Routes ---
 // Displays the books page
-app.get(`${BASE_PATH}/books`, isAuthenticated, async (req, res) => {
+app.get('/books', isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let books = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -616,7 +618,7 @@ app.get(`${BASE_PATH}/books`, isAuthenticated, async (req, res) => {
 });
 
 // Adds a new book
-app.post(`${BASE_PATH}/books/create`, isAuthenticated, async (req, res) => {
+app.post('/books/create', isAuthenticated, async (req, res) => {
     const { title, author, notes, link, pdfUrl, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -645,7 +647,7 @@ app.post(`${BASE_PATH}/books/create`, isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit book page
-app.get(`${BASE_PATH}/books/edit/:id`, isAuthenticated, async (req, res) => {
+app.get('/books/edit/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -665,7 +667,7 @@ app.get(`${BASE_PATH}/books/edit/:id`, isAuthenticated, async (req, res) => {
 });
 
 // Updates a book
-app.post(`${BASE_PATH}/books/update/:id`, isAuthenticated, async (req, res) => {
+app.post('/books/update/:id', isAuthenticated, async (req, res) => {
     const { title, author, notes, link, pdfUrl, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -699,7 +701,7 @@ app.post(`${BASE_PATH}/books/update/:id`, isAuthenticated, async (req, res) => {
 });
 
 // Deletes a book
-app.post(`${BASE_PATH}/books/delete/:id`, isAuthenticated, async (req, res) => {
+app.post('/books/delete/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -722,7 +724,7 @@ app.post(`${BASE_PATH}/books/delete/:id`, isAuthenticated, async (req, res) => {
 
 // --- Web-Links Routes ---
 // Displays the weblinks page
-app.get(`${BASE_PATH}/weblinks`, isAuthenticated, async (req, res) => {
+app.get('/weblinks', isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let weblinks = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -753,7 +755,7 @@ app.get(`${BASE_PATH}/weblinks`, isAuthenticated, async (req, res) => {
 });
 
 // Adds a new web-link
-app.post(`${BASE_PATH}/weblinks/create`, isAuthenticated, async (req, res) => {
+app.post('/weblinks/create', isAuthenticated, async (req, res) => {
     const { title, url, notes, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -780,7 +782,7 @@ app.post(`${BASE_PATH}/weblinks/create`, isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit web-link page
-app.get(`${BASE_PATH}/weblinks/edit/:id`, isAuthenticated, async (req, res) => {
+app.get('/weblinks/edit/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -800,7 +802,7 @@ app.get(`${BASE_PATH}/weblinks/edit/:id`, isAuthenticated, async (req, res) => {
 });
 
 // Updates a web-link
-app.post(`${BASE_PATH}/weblinks/update/:id`, isAuthenticated, async (req, res) => {
+app.post('/weblinks/update/:id', isAuthenticated, async (req, res) => {
     const { title, url, notes, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -832,7 +834,7 @@ app.post(`${BASE_PATH}/weblinks/update/:id`, isAuthenticated, async (req, res) =
 });
 
 // Deletes a web-link
-app.post(`${BASE_PATH}/weblinks/delete/:id`, isAuthenticated, async (req, res) => {
+app.post('/weblinks/delete/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -855,7 +857,7 @@ app.post(`${BASE_PATH}/weblinks/delete/:id`, isAuthenticated, async (req, res) =
 
 // --- Grammar Routes ---
 // Displays the grammar page
-app.get(`${BASE_PATH}/grammar`, isAuthenticated, async (req, res) => {
+app.get('/grammar', isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let grammarEntries = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -887,7 +889,7 @@ app.get(`${BASE_PATH}/grammar`, isAuthenticated, async (req, res) => {
 });
 
 // Adds a new grammar entry
-app.post(`${BASE_PATH}/grammar/create`, isAuthenticated, async (req, res) => {
+app.post('/grammar/create', isAuthenticated, async (req, res) => {
     const { topic, rule, examples, notes, hashtags } = req.body;
     const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
@@ -916,7 +918,7 @@ app.post(`${BASE_PATH}/grammar/create`, isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit grammar entry page
-app.get(`${BASE_PATH}/grammar/edit/:id`, isAuthenticated, async (req, res) => {
+app.get('/grammar/edit/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -936,7 +938,7 @@ app.get(`${BASE_PATH}/grammar/edit/:id`, isAuthenticated, async (req, res) => {
 });
 
 // Updates a grammar entry
-app.post(`${BASE_PATH}/grammar/update/:id`, isAuthenticated, async (req, res) => {
+app.post('/grammar/update/:id', isAuthenticated, async (req, res) => {
     const { topic, rule, examples, notes, hashtags } = req.body;
     const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0).map(ex => ex.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')) : []; // Added smart quote replacement
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
@@ -970,7 +972,7 @@ app.post(`${BASE_PATH}/grammar/update/:id`, isAuthenticated, async (req, res) =>
 });
 
 // Deletes a grammar entry
-app.post(`${BASE_PATH}/grammar/delete/:id`, isAuthenticated, async (req, res) => {
+app.post('/grammar/delete/:id', isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -993,7 +995,7 @@ app.post(`${BASE_PATH}/grammar/delete/:id`, isAuthenticated, async (req, res) =>
 
 // --- Archives Routes ---
 // Displays the archives overview page
-app.get(`${BASE_PATH}/archives`, isAuthenticated, async (req, res) => {
+app.get('/archives', isAuthenticated, async (req, res) => {
     try {
         res.render('archives', { user: res.locals.user, firebaseConfig: res.locals.firebaseConfig });
     } catch (err) {
