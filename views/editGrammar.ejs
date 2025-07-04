@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/home.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/home.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -26,7 +26,7 @@
                             <i class="fas fa-edit me-2"></i>Edit Grammar Entry
                         </div>
                         <div class="card-body">
-                            <form method="post" action="/grammar/update/<%= grammarEntry.id %>">
+                            <form method="post" action="<%= BASE_PATH %>/grammar/update/<%= grammarEntry.id %>">
                                 <div class="mb-3">
                                     <label for="topic" class="form-label">Grammar Topic</label>
                                     <input type="text" class="form-control" id="topic" name="topic" value="<%= grammarEntry.topic %>" required>
@@ -52,7 +52,7 @@
                                 </div>
                                 
                                 <div class="d-flex justify-content-between">
-                                    <a href="/grammar" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="<%= BASE_PATH %>/grammar" class="btn btn-outline-secondary">Cancel</a>
                                     <div>
                                         <button type="submit" class="btn btn-primary me-2">Update</button>
                                         <button type="button" class="btn btn-danger delete-grammar-btn" data-id="<%= grammarEntry.id %>">
@@ -104,7 +104,7 @@
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const entryId = this.dataset.id;
-                    deleteGrammarForm.action = `/grammar/delete/${entryId}`;
+                    deleteGrammarForm.action = `<%= BASE_PATH %>/grammar/delete/${entryId}`;
                     deleteGrammarModal.show();
                 });
             });

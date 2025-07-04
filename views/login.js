@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/home.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/home.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -63,7 +63,7 @@
             </div>
 
             <button class="w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
-            <p class="mt-3 mb-0 text-muted">Don't have an account? <a href="<%= BASE_PATH %>/register">Register here</a></p>
+            <p class="mt-3 mb-0 text-muted">Don't have an account? <a href="/register">Register here</a></p>
             <div id="errorMessage" class="alert alert-danger alert-message d-none" role="alert"></div>
             <div id="successMessage" class="alert alert-success alert-message d-none" role="alert"></div>
         </form>
@@ -131,8 +131,7 @@
                 const idToken = await userCredential.user.getIdToken(); // Get ID Token
 
                 // Send ID token to server to create a session cookie
-                // Use BASE_PATH for the sessionLogin fetch call
-                const response = await fetch('<%= BASE_PATH %>/sessionLogin', {
+                const response = await fetch('/sessionLogin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ idToken })
@@ -142,7 +141,7 @@
                     successMessageDiv.textContent = 'Login successful! Redirecting...';
                     successMessageDiv.classList.remove('d-none');
                     setTimeout(() => {
-                        window.location.href = '<%= BASE_PATH %>/'; // Redirect to home on success
+                        window.location.href = '/'; // Redirect to home on success
                     }, 1500);
                 } else {
                     errorMessageDiv.textContent = 'Failed to establish session on server.';

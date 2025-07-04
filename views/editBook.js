@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/home.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/home.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -26,7 +26,7 @@
                             <i class="fas fa-edit me-2"></i>Edit Book
                         </div>
                         <div class="card-body">
-                            <form method="post" action="<%= BASE_PATH %>/books/update/<%= book.id %>">
+                            <form method="post" action="/books/update/<%= book.id %>">
                                 <div class="mb-3">
                                     <label for="title" class="form-label">Book Title</label>
                                     <input type="text" class="form-control" id="title" name="title" value="<%= book.title %>" required>
@@ -56,7 +56,7 @@
                                 </div>
                                 
                                 <div class="d-flex justify-content-between">
-                                    <a href="<%= BASE_PATH %>/books" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="/books" class="btn btn-outline-secondary">Cancel</a>
                                     <div>
                                         <button type="submit" class="btn btn-primary me-2">Update</button>
                                         <button type="button" class="btn btn-danger delete-book-btn" data-id="<%= book.id %>">
@@ -107,7 +107,7 @@
             if (deleteButton) {
                 deleteButton.addEventListener('click', function() {
                     const bookId = this.dataset.id;
-                    deleteBookForm.action = `<%= BASE_PATH %>/books/delete/${bookId}`;
+                    deleteBookForm.action = `/books/delete/${bookId}`;
                     deleteBookModal.show();
                 });
             }

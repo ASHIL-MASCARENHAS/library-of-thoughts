@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/home.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/home.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -20,25 +20,25 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs justify-content-center">
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/liturgicalCalendar">Liturgical Calendar</a>
+                <a class="nav-link" href="/liturgicalCalendar">Liturgical Calendar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/insights">Insights</a>
+                <a class="nav-link" href="/insights">Insights</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/anecdotes">Anecdotes</a>
+                <a class="nav-link" href="/anecdotes">Anecdotes</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/books">Books</a>
+                <a class="nav-link" href="/books">Books</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/weblinks">Web-Links</a>
+                <a class="nav-link" href="/weblinks">Web-Links</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/grammar">Grammar</a>
+                <a class="nav-link" href="/grammar">Grammar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="<%= BASE_PATH %>/archives">Archives</a>
+                <a class="nav-link active" aria-current="page" href="/archives">Archives</a>
             </li>
         </ul>
 
@@ -61,27 +61,27 @@
                             <p class="card-text">From here, you can navigate to different sections of your archived thoughts and resources:</p>
                             <ul class="list-group list-group-flush">
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="<%= BASE_PATH %>/liturgicalCalendar" class="text-decoration-none text-primary fw-bold">Liturgical Calendar Reflections</a>
+                                    <a href="/liturgicalCalendar" class="text-decoration-none text-primary fw-bold">Liturgical Calendar Reflections</a>
                                     <i class="fas fa-calendar-day text-muted"></i>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="<%= BASE_PATH %>/insights" class="text-decoration-none text-primary fw-bold">Insights</a>
+                                    <a href="/insights" class="text-decoration-none text-primary fw-bold">Insights</a>
                                     <i class="fas fa-lightbulb text-muted"></i>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="<%= BASE_PATH %>/anecdotes" class="text-decoration-none text-primary fw-bold">Anecdotes</a>
+                                    <a href="/anecdotes" class="text-decoration-none text-primary fw-bold">Anecdotes</a>
                                     <i class="fas fa-book-open text-muted"></i>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="<%= BASE_PATH %>/books" class="text-decoration-none text-primary fw-bold">Books</a>
+                                    <a href="/books" class="text-decoration-none text-primary fw-bold">Books</a>
                                     <i class="fas fa-book-reader text-muted"></i>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="<%= BASE_PATH %>/weblinks" class="text-decoration-none text-primary fw-bold">Web-Links</a>
+                                    <a href="/weblinks" class="text-decoration-none text-primary fw-bold">Web-Links</a>
                                     <i class="fas fa-link text-muted"></i>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="<%= BASE_PATH %>/grammar" class="text-decoration-none text-primary fw-bold">Grammar</a>
+                                    <a href="/grammar" class="text-decoration-none text-primary fw-bold">Grammar</a>
                                     <i class="fas fa-spell-check text-muted"></i>
                                 </li>
                             </ul>

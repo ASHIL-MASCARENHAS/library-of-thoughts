@@ -182,8 +182,8 @@ app.post(`${BASE_PATH}/sessionLogout`, async (req, res) => {
 });
 
 // --- Main Routes ---
-// The root of the application, now relative to BASE_PATH
-app.get(`${BASE_PATH}/`, (req, res) => {
+// This route handles the root path of the serverless function (which is /libraryOfThoughts/ on the domain)
+app.get('/', (req, res) => {
     res.render('home', { user: res.locals.user });
 });
 
@@ -938,7 +938,7 @@ app.get(`${BASE_PATH}/grammar/edit/:id`, isAuthenticated, async (req, res) => {
 // Updates a grammar entry
 app.post(`${BASE_PATH}/grammar/update/:id`, isAuthenticated, async (req, res) => {
     const { topic, rule, examples, notes, hashtags } = req.body;
-    const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
+    const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0).map(ex => ex.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')) : []; // Added smart quote replacement
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
     if (!admin.apps.length || !res.locals.user) {

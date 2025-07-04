@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
-    <link rel="stylesheet" href="<%= BASE_PATH %>/css/home.css"> <!-- Using home.css for general styling -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/home.css"> <!-- Using home.css for general styling -->
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -20,25 +20,25 @@
         <!-- Tabs -->
         <ul class="nav nav-tabs justify-content-center">
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/liturgicalCalendar">Liturgical Calendar</a>
+                <a class="nav-link" href="/liturgicalCalendar">Liturgical Calendar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/insights">Insights</a>
+                <a class="nav-link" href="/insights">Insights</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/anecdotes">Anecdotes</a>
+                <a class="nav-link" href="/anecdotes">Anecdotes</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/books">Books</a>
+                <a class="nav-link" href="/books">Books</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/weblinks">Web-Links</a>
+                <a class="nav-link" href="/weblinks">Web-Links</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/grammar">Grammar</a>
+                <a class="nav-link" href="/grammar">Grammar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="<%= BASE_PATH %>/archives">Archives</a>
+                <a class="nav-link" href="/archives">Archives</a>
             </li>
         </ul>
 
@@ -58,7 +58,7 @@
                             <i class="fas fa-calendar-alt text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Liturgical Calendar</h5>
                             <p class="card-text text-muted">Daily readings, seasons, and your personal reflections tied to the Church year.</p>
-                            <a href="<%= BASE_PATH %>/liturgicalCalendar" class="btn btn-sm btn-outline-primary">Go to Calendar</a>
+                            <a href="/liturgicalCalendar" class="btn btn-sm btn-outline-primary">Go to Calendar</a>
                         </div>
                     </div>
                 </div>
@@ -68,7 +68,7 @@
                             <i class="fas fa-lightbulb text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Insights</h5>
                             <p class="card-text text-muted">General thoughts, spiritual insights, and non-daily reflections.</p>
-                            <a href="<%= BASE_PATH %>/insights" class="btn btn-sm btn-outline-primary">View Insights</a>
+                            <a href="/insights" class="btn btn-sm btn-outline-primary">View Insights</a>
                         </div>
                     </div>
                 </div>
@@ -78,7 +78,7 @@
                             <i class="fas fa-book-open text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Anecdotes</h5>
                             <p class="card-text text-muted">Discover inspiring stories and short narratives that uplift the spirit.</p>
-                            <a href="<%= BASE_PATH %>/anecdotes" class="btn btn-sm btn-outline-primary">View Anecdotes</a>
+                            <a href="/anecdotes" class="btn btn-sm btn-outline-primary">View Anecdotes</a>
                         </div>
                     </div>
                 </div>
@@ -88,7 +88,7 @@
                             <i class="fas fa-book-reader text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Books</h5>
                             <p class="card-text text-muted">Find recommendations, PDFs, and notes on spiritual books.</p>
-                            <a href="<%= BASE_PATH %>/books" class="btn btn-sm btn-outline-primary">Browse Books</a>
+                            <a href="/books" class="btn btn-sm btn-outline-primary">Browse Books</a>
                         </div>
                     </div>
                 </div>
@@ -98,7 +98,7 @@
                             <i class="fas fa-link text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Web-Links</h5>
                             <p class="card-text text-muted">Curated list of external spiritual resources and websites.</p>
-                            <a href="<%= BASE_PATH %>/weblinks" class="btn btn-sm btn-outline-primary">Explore Links</a>
+                            <a href="/weblinks" class="btn btn-sm btn-outline-primary">Explore Links</a>
                         </div>
                     </div>
                 </div>
@@ -108,7 +108,7 @@
                             <i class="fas fa-language text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Grammar</h5>
                             <p class="card-text text-muted">Resources for understanding biblical languages and theological terms.</p>
-                            <a href="<%= BASE_PATH %>/grammar" class="btn btn-sm btn-outline-primary">Study Grammar</a>
+                            <a href="/grammar" class="btn btn-sm btn-outline-primary">Study Grammar</a>
                         </div>
                     </div>
                 </div>
@@ -118,7 +118,7 @@
                             <i class="fas fa-archive text-orange mb-3" style="font-size: 2.5rem;"></i>
                             <h5 class="card-title text-orange">Archives</h5>
                             <p class="card-text text-muted">Access older insights and custom content that have been archived.</p>
-                            <a href="<%= BASE_PATH %>/archives" class="btn btn-sm btn-outline-primary">View Archives</a>
+                            <a href="/archives" class="btn btn-sm btn-outline-primary">View Archives</a>
                         </div>
                     </div>
                 </div>

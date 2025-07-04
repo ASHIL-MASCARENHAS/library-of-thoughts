@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/liturgicalCalendar.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/liturgicalCalendar.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -26,7 +26,7 @@
                             <i class="fas fa-edit me-2"></i>Edit Daily Reflection for <%= reflection.date.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
                         </div>
                         <div class="card-body">
-                            <form method="post" action="/liturgicalCalendar/reflect/update/<%= reflection.id %>">
+                            <form method="post" action="<%= BASE_PATH %>/liturgicalCalendar/reflect/update/<%= reflection.id %>">
                                 <input type="hidden" name="date" value="<%= reflection.date.toDate().toISOString().slice(0, 10) %>">
                                 <div class="mb-3">
                                     <label for="description" class="form-label">Reflection Description</label>
@@ -41,7 +41,7 @@
                                 </div>
                                 
                                 <div class="d-flex justify-content-between">
-                                    <a href="/liturgicalCalendar?date=<%= reflection.date.toDate().toISOString().slice(0, 10) %>" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="<%= BASE_PATH %>/liturgicalCalendar?date=<%= reflection.date.toDate().toISOString().slice(0, 10) %>" class="btn btn-outline-secondary">Cancel</a>
                                     <div>
                                         <button type="submit" class="btn btn-primary me-2">Update</button>
                                         <button type="button" class="btn btn-danger delete-reflection-btn" data-id="<%= reflection.id %>" data-date="<%= reflection.date.toDate().toISOString().slice(0, 10) %>">
@@ -94,7 +94,7 @@
                 deleteButton.addEventListener('click', function() {
                     const reflectionId = this.dataset.id;
                     const reflectionDate = this.dataset.date;
-                    deleteReflectionForm.action = `/liturgicalCalendar/reflect/delete/${reflectionId}?date=${reflectionDate}`;
+                    deleteReflectionForm.action = `<%= BASE_PATH %>/liturgicalCalendar/reflect/delete/${reflectionId}?date=${reflectionDate}`;
                     deleteReflectionModal.show();
                 });
             }
