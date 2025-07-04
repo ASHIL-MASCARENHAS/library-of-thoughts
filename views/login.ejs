@@ -131,7 +131,6 @@
                 const idToken = await userCredential.user.getIdToken(); // Get ID Token
 
                 // Send ID token to server to create a session cookie
-                // Use BASE_PATH for the sessionLogin fetch call
                 const response = await fetch('<%= BASE_PATH %>/sessionLogin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
