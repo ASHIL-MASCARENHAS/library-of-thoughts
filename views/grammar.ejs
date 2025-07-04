@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar | Library of Thoughts</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/home.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="content-wrapper">
+        <!-- Navbar Section -->
+        <%- include('navbar', { activePage: 'grammar', user: user }); %>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs justify-content-center">
+            <li class="nav-item">
+                <a class="nav-link" href="/liturgicalCalendar">Liturgical Calendar</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/insights">Insights</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/anecdotes">Anecdotes</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/books">Books</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/weblinks">Web-Links</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="/grammar">Grammar</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/archives">Archives</a>
+            </li>
+        </ul>
+
+        <!-- Main Content Area -->
+        <main class="container main-content mt-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <!-- Add New Grammar Entry Form -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <i class="fas fa-plus me-2"></i>Add New Grammar Entry
+                        </div>
+                        <div class="card-body">
+                            <form action="/grammar/create" method="POST">
+                                <div class="mb-3">
+                                    <label for="topic" class="form-label">Grammar Topic</label>
+                                    <input type="text" class="form-control" id="topic" name="topic" placeholder="e.g., Verb Tenses, Punctuation" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="rule" class="form-label">Rule/Explanation</label>
+                                    <textarea class="form-control" id="rule" name="rule" rows="4" placeholder="Explain the grammar rule here..." required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="examples" class="form-label">Examples (one per line)</label>
+                                    <textarea class="form-control" id="examples" name="examples" rows="3" placeholder="Example 1.&#10;Example 2."></textarea>
+                                    <div class="form-text">Separate multiple examples with a new line.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">Notes (Optional)</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Any additional notes or tips..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="hashtags" class="form-label">Hashtags</label>
+                                    <input type="text" class="form-control" id="hashtags" name="hashtags" placeholder="#syntax #morphology #english (separate with spaces or commas)">
+                                    <div class="form-text">Categorize your grammar entries.</div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="reset" class="btn btn-outline-secondary me-2">Clear</button>
+                                    <button type="submit" class="btn btn-primary">Save Entry</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Previous Grammar Entries Section -->
+                    <div class="mt-5">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3><i class="fas fa-spell-check me-2 text-primary-color"></i>Your Grammar Entries</h3>
+                            <form class="d-flex" action="/grammar" method="GET">
+                                <input type="text" class="form-control form-control-sm me-2" name="search" placeholder="Search grammar..." value="<%= typeof search !== 'undefined' ? search : '' %>">
+                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                            </form>
+                        </div>
+
+                        <% if (grammarEntries && grammarEntries.length > 0) { %>
+                            <div class="row row-cols-1 g-3">
+                                <% grammarEntries.forEach(entry => { %>
+                                    <div class="col">
+                                        <div class="card shadow-sm">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h5 class="card-title mb-0"><%= entry.topic %></h5>
+                                                    <small class="text-muted"><%= entry.createdAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></small>
+                                                </div>
+                                                <p class="card-text mb-2"><strong>Rule:</strong> <%= entry.rule.substring(0, 150) %><% if (entry.rule.length > 150) { %>...<% } %></p>
+                                                <% if (entry.examples && entry.examples.length > 0) { %>
+                                                    <div class="mb-2">
+                                                        <strong>Examples:</strong>
+                                                        <ul class="list-unstyled mb-0">
+                                                            <% entry.examples.slice(0, 2).forEach(example => { %>
+                                                                <li>- <%= example %></li>
+                                                            <% }); %>
+                                                            <% if (entry.examples.length > 2) { %>
+                                                                <li>...</li>
+                                                            <% } %>
+                                                        </ul>
+                                                    </div>
+                                                <% } %>
+                                                <% if (entry.notes) { %>
+                                                    <p class="card-text mb-2"><small class="text-muted">Notes: <%= entry.notes.substring(0, 100) %><% if (entry.notes.length > 100) { %>...<% } %></small></p>
+                                                <% } %>
+                                                <div class="hashtags mb-3">
+                                                    <% entry.hashtags.forEach(tag => { %>
+                                                        <span class="badge bg-light text-dark me-1">#<%= tag.name %></span>
+                                                    <% }); %>
+                                                </div>
+                                                <div class="d-flex justify-content-end">
+                                                    <a href="/grammar/edit/<%= entry.id %>" class="btn btn-sm btn-outline-primary me-2">
+                                                        <i class="fas fa-edit me-1"></i>Edit
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger delete-grammar-btn" data-id="<%= entry.id %>">
+                                                        <i class="fas fa-trash-alt me-1"></i>Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        <% } else { %>
+                            <div class="reflection-placeholder">
+                                <i class="fas fa-spell-check"></i>
+                                <h4>No grammar entries found</h4>
+                                <p class="mb-0">Start adding your grammar rules and examples here!</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Delete Confirmation Modal for Grammar -->
+    <div class="modal fade" id="deleteGrammarModal" tabindex="-1" aria-labelledby="deleteGrammarModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteGrammarModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this grammar entry? This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteGrammarForm" method="POST" action="">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <%- include('footer'); %>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Delete Confirmation Modal for Grammar
+            const deleteButtons = document.querySelectorAll('.delete-grammar-btn');
+            const deleteGrammarForm = document.getElementById('deleteGrammarForm');
+            const deleteGrammarModal = new bootstrap.Modal(document.getElementById('deleteGrammarModal'));
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const entryId = this.dataset.id;
+                    deleteGrammarForm.action = `/grammar/delete/${entryId}`;
+                    deleteGrammarModal.show();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

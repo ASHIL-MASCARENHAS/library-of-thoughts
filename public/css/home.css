@@ -1,0 +1,211 @@
+/* Root CSS Variables - Ensure consistency with styles.css */
+:root {
+    --primary-color: #6a11cb;
+    --primary-light: #f2e9ff;
+    --primary-dark: #441b6b;
+    --secondary-color: #43047d;
+    --gray-dark: #333;
+    --gray-medium: #555;
+    --gray-light: #6f6f6f;
+    --white: #fff;
+    --white-light: #f8f9fa; /* Adjusted to a standard light white for consistency */
+
+    /* Liturgical Colors - Keep as is, they are specific */
+    --liturgical-purple: #8a2be2;
+    --liturgical-green: #2e8b57;
+    --liturgical-white: #f8f9fa;
+    --liturgical-red: #dc3545;
+    --liturgical-gold: #ffd700;
+    --liturgical-rose: #ffc0cb;
+}
+
+/* Universal Box Sizing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
+
+/* Body Styling */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--white-light); /* Use consistent light background */
+    color: var(--gray-dark);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Main Content Wrapper */
+.content-wrapper {
+    flex: 1 0 auto; /* Allows content to grow and push footer down */
+}
+
+/* Navbar Brand Styling */
+.navbar-brand {
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--primary-color) !important; /* Ensure brand uses primary color */
+}
+
+/* Navbar Nav Link Styling - Overrides from styles.css if needed, but should be consistent */
+.navbar-nav .nav-link {
+    position: relative;
+    padding: 0.5rem 1rem;
+}
+
+.navbar-nav .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+    width: calc(100% - 2rem);
+}
+
+.nav-link.active {
+    color: var(--primary-color) !important;
+    font-weight: 600;
+}
+
+/* Tabs Styling */
+.nav-tabs {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color)); /* Gradient using primary colors */
+    border-radius: 0;
+    padding: 0 1rem;
+    border-bottom: none; /* Remove default border */
+}
+
+.nav-tabs .nav-link {
+    color: rgba(255, 255, 255, 0.85);
+    border: none;
+    border-radius: 0;
+    padding: 1rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.nav-tabs .nav-link:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-tabs .nav-link.active {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-bottom: 3px solid var(--white); /* Active tab indicator */
+}
+
+/* Liturgical Banner Styling */
+.liturgical-banner {
+    background: linear-gradient(45deg, var(--primary-light), var(--white));
+    padding: 2.5rem 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    color: var(--primary-dark);
+}
+
+.liturgical-banner h2 {
+    color: var(--primary-color);
+}
+
+/* Main Content Padding */
+.main-content {
+    padding-bottom: 3rem; /* Space before footer */
+}
+
+/* footer */
+.site-footer {
+    background-color: var(--primary-dark); /* Darker primary for footer */
+    color: white;
+    padding: 2rem 0;
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: 3rem;
+    border-top: 5px solid var(--primary-color); /* Accent border */
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+    text-align: center;
+}
+
+.footer-link {
+    color: var(--primary-light);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+.developer-credit {
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}
+
+/* for common footer */
+.site-footer {
+    background-color: #343a40;
+    color: white;
+    padding: 2rem 0;
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: 3rem;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.footer-link {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: white;
+}
+
+.developer-credit {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.2rem !important;
+    }
+    .navbar-nav .nav-link {
+        padding: 0.5rem 0.75rem;
+    }
+    .nav-tabs .nav-link {
+        padding: 0.75rem 1rem;
+    }
+    .liturgical-banner {
+        padding: 1.5rem 1rem;
+    }
+    .liturgical-banner h2 {
+        font-size: 2rem;
+    }
+    .liturgical-banner p {
+        font-size: 0.9rem;
+    }
+}
