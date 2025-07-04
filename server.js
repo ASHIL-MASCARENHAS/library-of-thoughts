@@ -2,7 +2,7 @@ require('dotenv').config(); // Load environment variables from .env file
 
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs'); // Keep fs for serviceAccountKey fallback if needed
 const admin = require('firebase-admin');
 const cookieParser = require('cookie-parser');
 
@@ -32,7 +32,6 @@ try {
 
 try {
     if (serviceAccount) {
-        // Check if app is already initialized to prevent re-initialization in hot-reloading environments
         if (!admin.apps.length) {
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount),
@@ -48,19 +47,37 @@ try {
     console.warn('Firebase Admin SDK initialization caught error:', error.message);
 }
 const db = admin.firestore();
-const authAdmin = admin.auth(); // Get Firebase Admin Auth instance
+const authAdmin = admin.auth();
 
 // Express app setup
 const app = express();
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
 
-// Load liturgical data
-const liturgicalData = JSON.parse(fs.readFileSync('./data/liturgical-calendar.json', 'utf-8'));
+// --- Load liturgical data from environment variable or fallback to local file ---
+let liturgicalData = {};
+try {
+    if (process.env.LITURGICAL_CALENDAR_DATA) {
+        liturgicalData = JSON.parse(process.env.LITURGICAL_CALENDAR_DATA);
+        console.log('Liturgical data loaded from environment variable.');
+    } else {
+        // Fallback to local file for development if env var is not set
+        const liturgicalDataPath = './data/liturgical-calendar.json';
+        if (fs.existsSync(liturgicalDataPath)) {
+            liturgicalData = JSON.parse(fs.readFileSync(liturgicalDataPath, 'utf-8'));
+            console.log('Liturgical data loaded from local file.');
+        } else {
+            console.error('Error: LITURGICAL_CALENDAR_DATA env var is missing and local liturgical-calendar.json not found.');
+        }
+    }
+} catch (error) {
+    console.error('Error loading or parsing liturgical data:', error);
+}
+// --- END LITURGICAL DATA LOADING ---
+
 
 // Construct Firebase client-side config from environment variables
 const firebaseClientConfig = {
@@ -140,8 +157,6 @@ app.post('/sessionLogin', async (req, res) => {
 
 app.post('/sessionLogout', async (req, res) => {
     res.clearCookie('__session');
-    // Optional: Revoke all refresh tokens for the user for stronger security
-    // This requires the Admin SDK to be initialized and the user object to be available
     if (admin.apps.length && authAdmin && res.locals.user && res.locals.user.uid) {
         try {
             await authAdmin.revokeRefreshTokens(res.locals.user.uid);
@@ -169,7 +184,6 @@ app.get('/liturgicalCalendar', isAuthenticated, async (req, res) => {
     const info = liturgicalData[requestedDate];
 
     let dailyReflections = [];
-    // Only attempt Firestore query if Admin SDK is initialized and user is authenticated
     if (admin.apps.length && res.locals.user) {
         try {
             const reflectionsRef = db.collection('reflections')
