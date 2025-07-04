@@ -6,6 +6,10 @@ const fs = require('fs'); // Keep fs for serviceAccountKey fallback if needed
 const admin = require('firebase-admin');
 const cookieParser = require('cookie-parser');
 
+// Define the base path for the application.
+// This is crucial for deployments where the app is served under a subdirectory.
+const BASE_PATH = process.env.BASE_PATH || '/libraryOfThoughts'; // Default to /libraryOfThoughts
+
 // --- Firebase Admin SDK Initialization ---
 let serviceAccount;
 try {
@@ -16,6 +20,7 @@ try {
         console.log('Firebase serviceAccountKey loaded from environment variable.');
     } else {
         // Fallback to local file (for local development)
+        // This path should ideally not be used in production for security reasons
         const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
         if (fs.existsSync(serviceAccountPath)) {
             serviceAccount = require(serviceAccountPath);
@@ -53,9 +58,12 @@ const authAdmin = admin.auth();
 const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Serve static files from the 'public' directory under the BASE_PATH
+app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
 
 // --- Load liturgical data from environment variable or fallback to local file ---
@@ -66,7 +74,8 @@ try {
         console.log('Liturgical data loaded from environment variable.');
     } else {
         // Fallback to local file for development if env var is not set
-        const liturgicalDataPath = './data/liturgical-calendar.json';
+        // Ensure this file is NOT committed if it contains sensitive data
+        const liturgicalDataPath = path.join(__dirname, 'data', 'liturgical-calendar.json');
         if (fs.existsSync(liturgicalDataPath)) {
             liturgicalData = JSON.parse(fs.readFileSync(liturgicalDataPath, 'utf-8'));
             console.log('Liturgical data loaded from local file.');
@@ -115,6 +124,8 @@ app.use(async (req, res, next) => {
     } else {
         console.warn('Firebase Admin SDK not fully initialized. Skipping session cookie verification.');
     }
+    // Make BASE_PATH available to EJS templates
+    res.locals.BASE_PATH = BASE_PATH;
     next();
 });
 
@@ -123,20 +134,21 @@ const isAuthenticated = (req, res, next) => {
     if (res.locals.user) {
         next(); // User is authenticated, proceed
     } else {
-        res.redirect('/login'); // Redirect to login page
+        // Redirect to login page, ensuring BASE_PATH is prepended
+        res.redirect(`${BASE_PATH}/login`);
     }
 };
 
 // --- Authentication Routes ---
-app.get('/login', (req, res) => {
+app.get(`${BASE_PATH}/login`, (req, res) => {
     res.render('login', { firebaseConfig: res.locals.firebaseConfig });
 });
 
-app.get('/register', (req, res) => {
+app.get(`${BASE_PATH}/register`, (req, res) => {
     res.render('register', { firebaseConfig: res.locals.firebaseConfig });
 });
 
-app.post('/sessionLogin', async (req, res) => {
+app.post(`${BASE_PATH}/sessionLogin`, async (req, res) => {
     const idToken = req.body.idToken;
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
 
@@ -156,7 +168,7 @@ app.post('/sessionLogin', async (req, res) => {
     }
 });
 
-app.post('/sessionLogout', async (req, res) => {
+app.post(`${BASE_PATH}/sessionLogout`, async (req, res) => {
     res.clearCookie('__session');
     if (admin.apps.length && authAdmin && res.locals.user && res.locals.user.uid) {
         try {
@@ -170,17 +182,18 @@ app.post('/sessionLogout', async (req, res) => {
 });
 
 // --- Main Routes ---
-app.get('/', (req, res) => {
+// The root of the application, now relative to BASE_PATH
+app.get(`${BASE_PATH}/`, (req, res) => {
     res.render('home', { user: res.locals.user });
 });
 
 // --- Content Overview Page ---
-app.get('/content', isAuthenticated, (req, res) => {
+app.get(`${BASE_PATH}/content`, isAuthenticated, (req, res) => {
     res.render('content', { user: res.locals.user });
 });
 
 // --- Liturgical Calendar Routes ---
-app.get('/liturgicalCalendar', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/liturgicalCalendar`, isAuthenticated, async (req, res) => {
     const requestedDate = req.query.date || new Date().toISOString().slice(0, 10);
     const info = liturgicalData[requestedDate];
 
@@ -210,7 +223,7 @@ app.get('/liturgicalCalendar', isAuthenticated, async (req, res) => {
 });
 
 // Adds a new daily reflection
-app.post('/liturgicalCalendar/reflect', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/liturgicalCalendar/reflect`, isAuthenticated, async (req, res) => {
     const { date, description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -227,7 +240,8 @@ app.post('/liturgicalCalendar/reflect', isAuthenticated, async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect(`/liturgicalCalendar?date=${date}`);
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${date}`);
     } catch (err) {
         console.error('Error adding daily reflection:', err);
         res.status(500).send('Server Error');
@@ -235,7 +249,7 @@ app.post('/liturgicalCalendar/reflect', isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit daily reflection page
-app.get('/liturgicalCalendar/reflect/edit/:id', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/liturgicalCalendar/reflect/edit/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -259,7 +273,7 @@ app.get('/liturgicalCalendar/reflect/edit/:id', isAuthenticated, async (req, res
 });
 
 // Updates a daily reflection
-app.post('/liturgicalCalendar/reflect/update/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/liturgicalCalendar/reflect/update/:id`, isAuthenticated, async (req, res) => {
     const { date, description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -280,7 +294,8 @@ app.post('/liturgicalCalendar/reflect/update/:id', isAuthenticated, async (req, 
             hashtags: tagsArray,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect(`/liturgicalCalendar?date=${date}`);
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${date}`);
     } catch (err) {
         console.error('Error updating daily reflection:', err);
         res.status(500).send('Server Error');
@@ -288,7 +303,7 @@ app.post('/liturgicalCalendar/reflect/update/:id', isAuthenticated, async (req, 
 });
 
 // Deletes a daily reflection
-app.post('/liturgicalCalendar/reflect/delete/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/liturgicalCalendar/reflect/delete/:id`, isAuthenticated, async (req, res) => {
     const redirectDate = req.query.date || new Date().toISOString().slice(0, 10);
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
@@ -302,7 +317,8 @@ app.post('/liturgicalCalendar/reflect/delete/:id', isAuthenticated, async (req, 
         }
 
         await reflectionRef.delete();
-        res.redirect(`/liturgicalCalendar?date=${redirectDate}`);
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${redirectDate}`);
     } catch (err) {
         console.error('Error deleting daily reflection:', err);
         res.status(500).send('Server Error');
@@ -312,7 +328,7 @@ app.post('/liturgicalCalendar/reflect/delete/:id', isAuthenticated, async (req, 
 
 // --- Insights Routes ---
 // Displays the insights page
-app.get('/insights', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/insights`, isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let insights = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -341,7 +357,7 @@ app.get('/insights', isAuthenticated, async (req, res) => {
 });
 
 // Adds a new insight
-app.post('/insightsCreate', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/insightsCreate`, isAuthenticated, async (req, res) => {
     const { description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -357,7 +373,8 @@ app.post('/insightsCreate', isAuthenticated, async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/insights');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/insights`);
     } catch (err) {
         console.error('Error adding insight:', err);
         res.status(500).send('Server Error');
@@ -365,7 +382,7 @@ app.post('/insightsCreate', isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit insight page
-app.get('/insights/edit/:id', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/insights/edit/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -385,7 +402,7 @@ app.get('/insights/edit/:id', isAuthenticated, async (req, res) => {
 });
 
 // Updates an insight
-app.post('/insights/update/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/insights/update/:id`, isAuthenticated, async (req, res) => {
     const { description, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -406,7 +423,8 @@ app.post('/insights/update/:id', isAuthenticated, async (req, res) => {
             hashtags: tagsArray,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/insights');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/insights`);
     } catch (err) {
         console.error('Error updating insight:', err);
         res.status(500).send('Server Error');
@@ -414,7 +432,7 @@ app.post('/insights/update/:id', isAuthenticated, async (req, res) => {
 });
 
 // Deletes an insight
-app.post('/insights/delete/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/insights/delete/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -427,7 +445,8 @@ app.post('/insights/delete/:id', isAuthenticated, async (req, res) => {
         }
 
         await insightRef.delete();
-        res.redirect('/insights');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/insights`);
     } catch (err) {
         console.error('Error deleting insight:', err);
         res.status(500).send('Server Error');
@@ -436,7 +455,7 @@ app.post('/insights/delete/:id', isAuthenticated, async (req, res) => {
 
 // --- Anecdotes Routes ---
 // Displays the anecdotes page
-app.get('/anecdotes', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/anecdotes`, isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let anecdotes = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -466,7 +485,7 @@ app.get('/anecdotes', isAuthenticated, async (req, res) => {
 });
 
 // Adds a new anecdote
-app.post('/anecdotes/create', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/anecdotes/create`, isAuthenticated, async (req, res) => {
     const { title, content, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -483,7 +502,8 @@ app.post('/anecdotes/create', isAuthenticated, async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/anecdotes');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/anecdotes`);
     } catch (err) {
         console.error('Error adding anecdote:', err);
         res.status(500).send('Server Error');
@@ -491,7 +511,7 @@ app.post('/anecdotes/create', isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit anecdote page
-app.get('/anecdotes/edit/:id', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/anecdotes/edit/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -511,7 +531,7 @@ app.get('/anecdotes/edit/:id', isAuthenticated, async (req, res) => {
 });
 
 // Updates an anecdote
-app.post('/anecdotes/update/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/anecdotes/update/:id`, isAuthenticated, async (req, res) => {
     const { title, content, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -533,7 +553,8 @@ app.post('/anecdotes/update/:id', isAuthenticated, async (req, res) => {
             hashtags: tagsArray,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/anecdotes');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/anecdotes`);
     } catch (err) {
         console.error('Error updating anecdote:', err);
         res.status(500).send('Server Error');
@@ -541,7 +562,7 @@ app.post('/anecdotes/update/:id', isAuthenticated, async (req, res) => {
 });
 
 // Deletes an anecdote
-app.post('/anecdotes/delete/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/anecdotes/delete/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -554,7 +575,8 @@ app.post('/anecdotes/delete/:id', isAuthenticated, async (req, res) => {
         }
 
         await anecdoteRef.delete();
-        res.redirect('/anecdotes');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/anecdotes`);
     } catch (err) {
         console.error('Error deleting anecdote:', err);
         res.status(500).send('Server Error');
@@ -563,7 +585,7 @@ app.post('/anecdotes/delete/:id', isAuthenticated, async (req, res) => {
 
 // --- Books Routes ---
 // Displays the books page
-app.get('/books', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/books`, isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let books = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -594,7 +616,7 @@ app.get('/books', isAuthenticated, async (req, res) => {
 });
 
 // Adds a new book
-app.post('/books/create', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/books/create`, isAuthenticated, async (req, res) => {
     const { title, author, notes, link, pdfUrl, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -614,7 +636,8 @@ app.post('/books/create', isAuthenticated, async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/books');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/books`);
     } catch (err) {
         console.error('Error adding book:', err);
         res.status(500).send('Server Error');
@@ -622,7 +645,7 @@ app.post('/books/create', isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit book page
-app.get('/books/edit/:id', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/books/edit/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -642,7 +665,7 @@ app.get('/books/edit/:id', isAuthenticated, async (req, res) => {
 });
 
 // Updates a book
-app.post('/books/update/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/books/update/:id`, isAuthenticated, async (req, res) => {
     const { title, author, notes, link, pdfUrl, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -667,7 +690,8 @@ app.post('/books/update/:id', isAuthenticated, async (req, res) => {
             hashtags: tagsArray,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/books');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/books`);
     } catch (err) {
         console.error('Error updating book:', err);
         res.status(500).send('Server Error');
@@ -675,7 +699,7 @@ app.post('/books/update/:id', isAuthenticated, async (req, res) => {
 });
 
 // Deletes a book
-app.post('/books/delete/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/books/delete/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -688,7 +712,8 @@ app.post('/books/delete/:id', isAuthenticated, async (req, res) => {
         }
 
         await bookRef.delete();
-        res.redirect('/books');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/books`);
     } catch (err) {
         console.error('Error deleting book:', err);
         res.status(500).send('Server Error');
@@ -697,7 +722,7 @@ app.post('/books/delete/:id', isAuthenticated, async (req, res) => {
 
 // --- Web-Links Routes ---
 // Displays the weblinks page
-app.get('/weblinks', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/weblinks`, isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let weblinks = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -728,7 +753,7 @@ app.get('/weblinks', isAuthenticated, async (req, res) => {
 });
 
 // Adds a new web-link
-app.post('/weblinks/create', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/weblinks/create`, isAuthenticated, async (req, res) => {
     const { title, url, notes, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -746,7 +771,8 @@ app.post('/weblinks/create', isAuthenticated, async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/weblinks');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/weblinks`);
     } catch (err) {
         console.error('Error adding web-link:', err);
         res.status(500).send('Server Error');
@@ -754,7 +780,7 @@ app.post('/weblinks/create', isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit web-link page
-app.get('/weblinks/edit/:id', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/weblinks/edit/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -774,7 +800,7 @@ app.get('/weblinks/edit/:id', isAuthenticated, async (req, res) => {
 });
 
 // Updates a web-link
-app.post('/weblinks/update/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/weblinks/update/:id`, isAuthenticated, async (req, res) => {
     const { title, url, notes, hashtags } = req.body;
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
@@ -797,7 +823,8 @@ app.post('/weblinks/update/:id', isAuthenticated, async (req, res) => {
             hashtags: tagsArray,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/weblinks');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/weblinks`);
     } catch (err) {
         console.error('Error updating web-link:', err);
         res.status(500).send('Server Error');
@@ -805,7 +832,7 @@ app.post('/weblinks/update/:id', isAuthenticated, async (req, res) => {
 });
 
 // Deletes a web-link
-app.post('/weblinks/delete/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/weblinks/delete/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -818,7 +845,8 @@ app.post('/weblinks/delete/:id', isAuthenticated, async (req, res) => {
         }
 
         await weblinkRef.delete();
-        res.redirect('/weblinks');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/weblinks`);
     } catch (err) {
         console.error('Error deleting web-link:', err);
         res.status(500).send('Server Error');
@@ -827,7 +855,7 @@ app.post('/weblinks/delete/:id', isAuthenticated, async (req, res) => {
 
 // --- Grammar Routes ---
 // Displays the grammar page
-app.get('/grammar', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/grammar`, isAuthenticated, async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     let grammarEntries = [];
     if (!admin.apps.length || !res.locals.user) {
@@ -859,7 +887,7 @@ app.get('/grammar', isAuthenticated, async (req, res) => {
 });
 
 // Adds a new grammar entry
-app.post('/grammar/create', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/grammar/create`, isAuthenticated, async (req, res) => {
     const { topic, rule, examples, notes, hashtags } = req.body;
     const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
@@ -879,7 +907,8 @@ app.post('/grammar/create', isAuthenticated, async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/grammar');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/grammar`);
     } catch (err) {
         console.error('Error adding grammar entry:', err);
         res.status(500).send('Server Error');
@@ -887,7 +916,7 @@ app.post('/grammar/create', isAuthenticated, async (req, res) => {
 });
 
 // Displays the edit grammar entry page
-app.get('/grammar/edit/:id', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/grammar/edit/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -907,7 +936,7 @@ app.get('/grammar/edit/:id', isAuthenticated, async (req, res) => {
 });
 
 // Updates a grammar entry
-app.post('/grammar/update/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/grammar/update/:id`, isAuthenticated, async (req, res) => {
     const { topic, rule, examples, notes, hashtags } = req.body;
     const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
     const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
@@ -932,7 +961,8 @@ app.post('/grammar/update/:id', isAuthenticated, async (req, res) => {
             hashtags: tagsArray,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        res.redirect('/grammar');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/grammar`);
     } catch (err) {
         console.error('Error updating grammar entry:', err);
         res.status(500).send('Server Error');
@@ -940,7 +970,7 @@ app.post('/grammar/update/:id', isAuthenticated, async (req, res) => {
 });
 
 // Deletes a grammar entry
-app.post('/grammar/delete/:id', isAuthenticated, async (req, res) => {
+app.post(`${BASE_PATH}/grammar/delete/:id`, isAuthenticated, async (req, res) => {
     if (!admin.apps.length || !res.locals.user) {
         return res.status(500).send('Server error: Database service not ready or user not authenticated.');
     }
@@ -953,7 +983,8 @@ app.post('/grammar/delete/:id', isAuthenticated, async (req, res) => {
         }
 
         await grammarRef.delete();
-        res.redirect('/grammar');
+        // Redirect using BASE_PATH
+        res.redirect(`${BASE_PATH}/grammar`);
     } catch (err) {
         console.error('Error deleting grammar entry:', err);
         res.status(500).send('Server Error');
@@ -962,7 +993,7 @@ app.post('/grammar/delete/:id', isAuthenticated, async (req, res) => {
 
 // --- Archives Routes ---
 // Displays the archives overview page
-app.get('/archives', isAuthenticated, async (req, res) => {
+app.get(`${BASE_PATH}/archives`, isAuthenticated, async (req, res) => {
     try {
         res.render('archives', { user: res.locals.user, firebaseConfig: res.locals.firebaseConfig });
     } catch (err) {
