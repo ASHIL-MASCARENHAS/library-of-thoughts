@@ -6,10 +6,6 @@
       "use": "@vercel/node"
     }
   ],
-  "includeFiles": [
-    "data/**",
-    "serviceAccountKey.json"
-  ],
   "routes": [
     {
       "src": "/(.*)",
