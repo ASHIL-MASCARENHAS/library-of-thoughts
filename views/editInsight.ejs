@@ -85,15 +85,17 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Delete Confirmation Modal for Insights
-            const deleteButton = document.querySelector('.delete-insight-btn');
+            const deleteButtons = document.querySelectorAll('.delete-insight-btn');
             const deleteInsightForm = document.getElementById('deleteInsightForm');
             const deleteInsightModal = new bootstrap.Modal(document.getElementById('deleteInsightModal'));
 
-            if (deleteButton) {
-                deleteButton.addEventListener('click', function() {
-                    const insightId = this.dataset.id;
-                    deleteInsightForm.action = `<%= BASE_PATH %>/insights/delete/${insightId}`;
-                    deleteInsightModal.show();
+            if (deleteButtons) { // Check if deleteButtons exist
+                deleteButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const insightId = this.dataset.id;
+                        deleteInsightForm.action = `<%= BASE_PATH %>/insights/delete/${insightId}`;
+                        deleteInsightModal.show();
+                    });
                 });
             }
         });

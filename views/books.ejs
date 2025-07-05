@@ -104,7 +104,7 @@
                                         <div class="card shadow-sm">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <h5 class="card-title mb-0"><%= book.title %></h5>
+                                                    <h5 class="card-title mb-0"><a href="<%= book.link || book.pdfUrl || '#' %>" target="_blank" class="text-decoration-none text-primary"><%= book.title %> <% if (book.link || book.pdfUrl) { %><i class="fas fa-external-link-alt fa-xs ms-1"></i><% } %></a></h5>
                                                     <small class="text-muted">by <%= book.author %></small>
                                                 </div>
                                                 <p class="card-text mb-2"><%= book.notes.substring(0, 150) %><% if (book.notes.length > 150) { %>...<% } %></p>

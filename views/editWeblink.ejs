@@ -96,7 +96,7 @@
             const deleteWeblinkForm = document.getElementById('deleteWeblinkForm');
             const deleteWeblinkModal = new bootstrap.Modal(document.getElementById('deleteWeblinkModal'));
 
-            if (deleteButton) {
+            if (deleteButton) { // Check if deleteButton exists
                 deleteButton.addEventListener('click', function() {
                     const weblinkId = this.dataset.id;
                     deleteWeblinkForm.action = `<%= BASE_PATH %>/weblinks/delete/${weblinkId}`;
