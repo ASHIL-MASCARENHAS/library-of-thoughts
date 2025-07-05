@@ -61,7 +61,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Serve static files from the 'public' directory under the BASE_PATH
 // This means /libraryOfThoughts/css/styles.css will map to public/css/styles.css
-app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
