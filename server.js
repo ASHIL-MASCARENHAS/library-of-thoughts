@@ -58,6 +58,7 @@ const authAdmin = admin.auth();
 const app = express();
 app.set('view engine', 'ejs');
 // app.set('views', path.join(__dirname, 'views'));
+app.set(path.join(__dirname, 'views'));
 
 // Serve static files from the 'public' directory under the BASE_PATH
 // This means /libraryOfThoughts/css/styles.css will map to public/css/styles.css
