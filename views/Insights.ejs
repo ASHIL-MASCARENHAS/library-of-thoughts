@@ -154,13 +154,15 @@
             const deleteInsightForm = document.getElementById('deleteInsightForm');
             const deleteInsightModal = new bootstrap.Modal(document.getElementById('deleteInsightModal'));
 
-            deleteButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const insightId = this.dataset.id;
-                    deleteInsightForm.action = `<%= BASE_PATH %>/insights/delete/${insightId}`;
-                    deleteInsightModal.show();
+            if (deleteButtons) { // Check if deleteButtons exist
+                deleteButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const insightId = this.dataset.id;
+                        deleteInsightForm.action = `<%= BASE_PATH %>/insights/delete/${insightId}`;
+                        deleteInsightModal.show();
+                    });
                 });
-            });
+            }
         });
     </script>
 </body>
