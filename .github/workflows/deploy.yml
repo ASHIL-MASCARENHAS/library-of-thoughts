@@ -63,3 +63,5 @@ jobs:
               ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
 
             echo "Deployment finished. Check application at http://${{ env.EC2_HOST }}:3000${{ env.BASE_PATH }}/"
+
+            sudo systemctl reload nginx
