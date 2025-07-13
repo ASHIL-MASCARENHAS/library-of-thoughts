@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/insights.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/insights.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -26,7 +26,7 @@
                             <i class="fas fa-edit me-2"></i>Edit Insight
                         </div>
                         <div class="card-body">
-                            <form method="post" action="/insights/update/<%= insight.id %>">
+                            <form method="post" action="<%= BASE_PATH %>/insights/update/<%= insight.id %>">
                                 <div class="mb-3">
                                     <label for="description" class="form-label">Description</label>
                                     <textarea class="form-control" id="description" name="description" rows="4" required><%= insight.description %></textarea>
@@ -40,7 +40,7 @@
                                 </div>
                                 
                                 <div class="d-flex justify-content-between">
-                                    <a href="/insights" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="<%= BASE_PATH %>/insights" class="btn btn-outline-secondary">Cancel</a>
                                     <div>
                                         <button type="submit" class="btn btn-primary me-2">Update</button>
                                         <button type="button" class="btn btn-danger delete-insight-btn" data-id="<%= insight.id %>">
@@ -85,15 +85,17 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Delete Confirmation Modal for Insights
-            const deleteButton = document.querySelector('.delete-insight-btn');
+            const deleteButtons = document.querySelectorAll('.delete-insight-btn');
             const deleteInsightForm = document.getElementById('deleteInsightForm');
             const deleteInsightModal = new bootstrap.Modal(document.getElementById('deleteInsightModal'));
 
-            if (deleteButton) {
-                deleteButton.addEventListener('click', function() {
-                    const insightId = this.dataset.id;
-                    deleteInsightForm.action = `/insights/delete/${insightId}`;
-                    deleteInsightModal.show();
+            if (deleteButtons) { // Check if deleteButtons exist
+                deleteButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const insightId = this.dataset.id;
+                        deleteInsightForm.action = `<%= BASE_PATH %>/insights/delete/${insightId}`;
+                        deleteInsightModal.show();
+                    });
                 });
             }
         });

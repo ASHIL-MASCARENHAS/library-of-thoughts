@@ -1,0 +1,39 @@
+// models/Insight.js
+const mongoose = require('mongoose');
+
+const InsightSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    hashtags: [
+        {
+            name: {
+                type: String,
+                lowercase: true,
+                trim: true
+            }
+        }
+    ],
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+// Update `updatedAt` field on save
+InsightSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
+});
+
+module.exports = mongoose.model('Insight', InsightSchema);

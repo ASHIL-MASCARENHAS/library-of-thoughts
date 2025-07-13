@@ -26,7 +26,7 @@
                             <i class="fas fa-edit me-2"></i>Edit Book
                         </div>
                         <div class="card-body">
-                            <form method="post" action="<%= BASE_PATH %>/books/update/<%= book.id %>">
+                            <form method="POST" action="<%= BASE_PATH %>/books/update/<%= book._id %>">
                                 <div class="mb-3">
                                     <label for="title" class="form-label">Book Title</label>
                                     <input type="text" class="form-control" id="title" name="title" value="<%= book.title %>" required>
@@ -36,33 +36,27 @@
                                     <input type="text" class="form-control" id="author" name="author" value="<%= book.author %>" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="notes" class="form-label">Notes/Summary</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="4"><%= book.notes %></textarea>
+                                    <label for="notes" class="form-label">Notes (Optional)</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3"><%= book.notes %></textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="link" class="form-label">External Link (Optional)</label>
-                                    <input type="url" class="form-control" id="link" name="link" value="<%= book.link || '' %>">
+                                    <label for="link" class="form-label">Purchase Link (Optional)</label>
+                                    <input type="url" class="form-control" id="link" name="link" value="<%= book.link %>">
                                 </div>
                                 <div class="mb-3">
                                     <label for="pdfUrl" class="form-label">PDF Link (Optional)</label>
-                                    <input type="url" class="form-control" id="pdfUrl" name="pdfUrl" value="<%= book.pdfUrl || '' %>">
-                                    <div class="form-text">Link to a hosted PDF file.</div>
+                                    <input type="url" class="form-control" id="pdfUrl" name="pdfUrl" value="<%= book.pdfUrl %>">
+                                    <div class="form-text">Link to a digital copy if available.</div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="hashtags" class="form-label">Hashtags</label>
-                                    <input type="text" class="form-control" id="hashtags" name="hashtags" 
-                                        value="<%= book.hashtags.map(tag => `#${tag.name}`).join(' ') %>">
-                                    <div class="form-text">Separate with spaces or commas</div>
+                                    <input type="text" class="form-control" id="hashtags" name="hashtags" value="<%= book.hashtags.map(tag => tag.name).join(', ') %>" placeholder="#spiritual #theology #devotional (separate with spaces or commas)">
+                                    <div class="form-text">Categorize your books for easy searching.</div>
                                 </div>
-                                
-                                <div class="d-flex justify-content-between">
-                                    <a href="<%= BASE_PATH %>/books" class="btn btn-outline-secondary">Cancel</a>
-                                    <div>
-                                        <button type="submit" class="btn btn-primary me-2">Update</button>
-                                        <button type="button" class="btn btn-danger delete-book-btn" data-id="<%= book.id %>">
-                                            <i class="fas fa-trash-alt me-1"></i>Delete
-                                        </button>
-                                    </div>
+                                <div class="d-flex justify-content-end">
+                                    <a href="<%= BASE_PATH %>/books" class="btn btn-outline-secondary me-2">Cancel</a>
+                                    <button type="submit" class="btn btn-primary me-2">Update Book</button>
+                                    <button type="button" class="btn btn-danger delete-book-btn" data-id="<%= book._id %>">Delete</button>
                                 </div>
                             </form>
                         </div>

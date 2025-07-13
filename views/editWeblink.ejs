@@ -26,7 +26,7 @@
                             <i class="fas fa-edit me-2"></i>Edit Web-Link
                         </div>
                         <div class="card-body">
-                            <form method="post" action="<%= BASE_PATH %>/weblinks/update/<%= weblink.id %>">
+                            <form action="<%= BASE_PATH %>/weblinks/update/<%= weblink._id %>" method="POST">
                                 <div class="mb-3">
                                     <label for="title" class="form-label">Link Title</label>
                                     <input type="text" class="form-control" id="title" name="title" value="<%= weblink.title %>" required>
@@ -41,19 +41,13 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="hashtags" class="form-label">Hashtags</label>
-                                    <input type="text" class="form-control" id="hashtags" name="hashtags" 
-                                        value="<%= weblink.hashtags.map(tag => `#${tag.name}`).join(' ') %>">
-                                    <div class="form-text">Separate with spaces or commas</div>
+                                    <input type="text" class="form-control" id="hashtags" name="hashtags" value="<%= weblink.hashtags.map(tag => tag.name).join(', ') %>" placeholder="#catholic #resources #news (separate with spaces or commas)">
+                                    <div class="form-text">Categorize your links for easy searching.</div>
                                 </div>
-                                
-                                <div class="d-flex justify-content-between">
-                                    <a href="<%= BASE_PATH %>/weblinks" class="btn btn-outline-secondary">Cancel</a>
-                                    <div>
-                                        <button type="submit" class="btn btn-primary me-2">Update</button>
-                                        <button type="button" class="btn btn-danger delete-weblink-btn" data-id="<%= weblink.id %>">
-                                            <i class="fas fa-trash-alt me-1"></i>Delete
-                                        </button>
-                                    </div>
+                                <div class="d-flex justify-content-end">
+                                    <a href="<%= BASE_PATH %>/weblinks" class="btn btn-outline-secondary me-2">Cancel</a>
+                                    <button type="submit" class="btn btn-primary me-2">Update Link</button>
+                                    <button type="button" class="btn btn-danger delete-weblink-btn" data-id="<%= weblink._id %>">Delete</button>
                                 </div>
                             </form>
                         </div>
@@ -96,7 +90,7 @@
             const deleteWeblinkForm = document.getElementById('deleteWeblinkForm');
             const deleteWeblinkModal = new bootstrap.Modal(document.getElementById('deleteWeblinkModal'));
 
-            if (deleteButton) { // Check if deleteButton exists
+            if (deleteButton) {
                 deleteButton.addEventListener('click', function() {
                     const weblinkId = this.dataset.id;
                     deleteWeblinkForm.action = `<%= BASE_PATH %>/weblinks/delete/${weblinkId}`;

@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-2 py-lg-3">
     <div class="container-fluid">
         <!-- Brand Logo and Title -->
-        <a class="navbar-brand text-primary-color" href="/">
+        <a class="navbar-brand text-primary-color" href="<%= BASE_PATH %>/">
             <i class="fas fa-brain me-2"></i>Library of Thoughts
         </a>
         <!-- Navbar Toggler for Mobile -->
@@ -12,10 +12,10 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-center">
                 <li class="nav-item mx-1 mx-lg-2">
-                    <a class="nav-link <%= typeof activePage !== 'undefined' && activePage === 'home' ? 'active' : '' %>" href="/">Home</a>
+                    <a class="nav-link <%= typeof activePage !== 'undefined' && activePage === 'home' ? 'active' : '' %>" href="<%= BASE_PATH %>/">Home</a>
                 </li>
                 <li class="nav-item mx-1 mx-lg-2">
-                    <a class="nav-link <%= typeof activePage !== 'undefined' && (activePage === 'liturgicalCalendar' || activePage === 'insights' || activePage === 'anecdotes' || activePage === 'books' || activePage === 'weblinks' || activePage === 'grammar' || activePage === 'archives') ? 'active' : '' %>" href="/liturgicalCalendar">Content</a>
+                    <a class="nav-link <%= typeof activePage !== 'undefined' && (activePage === 'liturgicalCalendar' || activePage === 'insights' || activePage === 'anecdotes' || activePage === 'books' || activePage === 'weblinks' || activePage === 'grammar' || activePage === 'archives') ? 'active' : '' %>" href="<%= BASE_PATH %>/liturgicalCalendar">Content</a>
                 </li>
                 <li class="nav-item mx-1 mx-lg-2">
                     <a class="nav-link" href="#">Resources</a>
@@ -34,7 +34,7 @@
                             </ul>
                         </div>
                     <% } else { %>
-                        <a class="btn btn-outline-primary btn-sm px-3" href="/login">
+                        <a class="btn btn-outline-primary btn-sm px-3" href="<%= BASE_PATH %>/login">
                             <i class="fas fa-sign-in-alt me-1"></i>Sign In
                         </a>
                     <% } %>
@@ -101,8 +101,9 @@
                         e.preventDefault();
                         try {
                             await signOut(auth); // Sign out from Firebase client
-                            await fetch('/sessionLogout', { method: 'POST' }); // Notify server to clear session cookie
-                            window.location.href = '/login'; // Redirect to login after logout
+                            // Use BASE_PATH for the sessionLogout fetch call
+                            await fetch('<%= BASE_PATH %>/sessionLogout', { method: 'POST' }); // Notify server to clear session cookie
+                            window.location.href = '<%= BASE_PATH %>/login'; // Redirect to login after logout
                         } catch (error) {
                             console.error('Error signing out:', error);
                         }
@@ -111,7 +112,8 @@
                     // Refresh and send ID token to server to maintain session
                     try {
                         const idToken = await user.getIdToken(true); // true forces a refresh
-                        await fetch('/sessionLogin', {
+                        // Use BASE_PATH for the sessionLogin fetch call
+                        await fetch('<%= BASE_PATH %>/sessionLogin', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ idToken })
@@ -124,7 +126,7 @@
                 } else {
                     // User is signed out: show sign-in button
                     authStatusContainer.innerHTML = `
-                        <a class="btn btn-outline-primary btn-sm px-3" href="/login">
+                        <a class="btn btn-outline-primary btn-sm px-3" href="<%= BASE_PATH %>/login">
                             <i class="fas fa-sign-in-alt me-1"></i>Sign In
                         </a>
                     `;

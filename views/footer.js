@@ -5,7 +5,7 @@
                 <h5>Library of Thoughts</h5>
                 <p class="text-white-50">A spiritual resource for reflection and growth</p>
                 <div class="mt-2">
-                    <a href="/" class="footer-link me-3">About</a>
+                    <a href="<%= BASE_PATH %>/" class="footer-link me-3">About</a>
                     <a href="https://portfolio.builtbyashil.site" target="_blank" class="footer-link me-3">Contact</a>
                     <!-- <a href="#" class="footer-link">Privacy</a> (i'll impliment later)-->
                 </div>

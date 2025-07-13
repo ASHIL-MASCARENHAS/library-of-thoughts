@@ -1,248 +1,223 @@
+// server.js
 require('dotenv').config(); // Load environment variables from .env file
 
 const express = require('express');
 const path = require('path');
-const fs = require('fs'); // Keep fs for serviceAccountKey fallback if needed
-const admin = require('firebase-admin');
-const cookieParser = require('cookie-parser');
+const mongoose = require('mongoose'); // Mongoose for MongoDB interaction
+const session = require('express-session'); // For managing user sessions
+const MongoStore = require('connect-mongo'); // To store sessions in MongoDB
+const passport = require('passport'); // Authentication middleware
+const LocalStrategy = require('passport-local').Strategy; // Local authentication strategy
+const bcrypt = require('bcryptjs'); // For password hashing
+
+// Import Mongoose Models
+const User = require('./models/user');
+const Reflection = require('./models/Reflection');
+const Insight = require('./models/insight');
+const Anecdote = require('./models/Anecdote');
+const Book = require('./models/Book');
+const Weblink = require('./models/Weblink');
+const Grammar = require('./models/Grammar');
+
+const app = express();
 
 // Define the base path for the application.
-// This is crucial for deployments where the app is served under a subdirectory.
 const BASE_PATH = process.env.BASE_PATH || '/libraryOfThoughts'; // Default to /libraryOfThoughts
 
-// --- Firebase Admin SDK Initialization ---
-let serviceAccount;
-try {
-    // Attempt to load from environment variable (for production/deployment)
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64) {
-        const decodedServiceAccount = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64, 'base64').toString('utf8');
-        serviceAccount = JSON.parse(decodedServiceAccount);
-        console.log('Firebase serviceAccountKey loaded from environment variable.');
-    } else {
-        // Fallback to local file (for local development)
-        // This path should ideally not be used in production for security reasons
-        const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
-        if (fs.existsSync(serviceAccountPath)) {
-            serviceAccount = require(serviceAccountPath);
-            console.log('serviceAccountKey.json loaded successfully from local file:', serviceAccountPath);
-        } else {
-            console.error('Error: serviceAccountKey.json not found locally and FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 env var is missing.');
-            console.error('Firebase Admin SDK will not be fully initialized. Session management and secure Firestore access will be limited.');
-        }
+// --- MongoDB Connection ---
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/libraryofthoughts';
+
+mongoose.connect(MONGODB_URI)
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => console.error('MongoDB connection error:', err));
+
+// --- Middleware Setup ---
+app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
+app.use(express.json()); // For parsing application/json
+app.use(BASE_PATH,express.static(path.join(__dirname, 'public'))); // Serve static files
+app.set('view engine', 'ejs'); // Set EJS as the view engine
+app.set('views', path.join(__dirname, 'views')); // Specify views directory
+
+// Session Middleware
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'supersecretkey', // Use a strong secret from environment variables
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: MONGODB_URI,
+        collectionName: 'sessions', // Collection to store sessions
+        ttl: 14 * 24 * 60 * 60 // Session TTL (14 days)
+    }),
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        httpOnly: true // Prevent client-side JavaScript from accessing cookies
     }
-} catch (error) {
-    console.error('Error loading or parsing Firebase service account credentials:', error);
-    console.error('Please ensure FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 is valid base64 JSON or serviceAccountKey.json is valid and accessible.');
-}
+}));
 
-try {
-    if (serviceAccount) {
-        if (!admin.apps.length) {
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-            });
-            console.log('Firebase Admin SDK initialized for server-side operations.');
-        } else {
-            console.log('Firebase Admin SDK already initialized.');
-        }
-    } else {
-        console.warn('Firebase Admin SDK not initialized due to missing or invalid service account credentials.');
-    }
-} catch (error) {
-    console.warn('Firebase Admin SDK initialization caught error:', error.message);
-}
-const db = admin.firestore();
-const authAdmin = admin.auth();
+// Passport.js Initialization
+app.use(passport.initialize());
+app.use(passport.session());
 
-// Express app setup
-const app = express();
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-// Serve static files from the 'public' directory under the BASE_PATH
-// This means /libraryOfThoughts/css/styles.css will map to public/css/styles.css
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-// --- Load liturgical data from environment variable or fallback to local file ---
-let liturgicalData = {};
-try {
-    if (process.env.LITURGICAL_CALENDAR_DATA) {
-        liturgicalData = JSON.parse(process.env.LITURGICAL_CALENDAR_DATA);
-        console.log('Liturgical data loaded from environment variable.');
-    } else {
-        // Fallback to local file for development if env var is not set
-        // Ensure this file is NOT committed if it contains sensitive data
-        const liturgicalDataPath = path.join(__dirname, 'data', 'liturgical-calendar.json');
-        if (fs.existsSync(liturgicalDataPath)) {
-            liturgicalData = JSON.parse(fs.readFileSync(liturgicalDataPath, 'utf-8'));
-            console.log('Liturgical data loaded from local file.');
-        } else {
-            console.error('Error: LITURGICAL_CALENDAR_DATA env var is missing and local liturgical-calendar.json not found.');
-        }
-    }
-} catch (error) {
-    console.error('Error loading or parsing liturgical data:', error);
-}
-// --- END LITURGICAL DATA LOADING ---
-
-
-// Construct Firebase client-side config from environment variables
-const firebaseClientConfig = {
-    apiKey: process.env.APIKEY,
-    authDomain: process.env.AUTHDOMAIN,
-    projectId: process.env.PROJECTID,
-    storageBucket: process.env.STORAGEBUCKET,
-    messagingSenderId: process.env.MESSAGINGSENDERID,
-    appId: process.env.APPID,
-    measurementId: process.env.MEASUREMENTID // Optional
-};
-
-console.log('Firebase Client Config being passed to EJS:', firebaseClientConfig);
-
-// Middleware to make Firebase config and user available to all EJS templates
-app.use(async (req, res, next) => {
-    res.locals.firebaseConfig = firebaseClientConfig; // Client-side config
-    res.locals.user = null; // Default user to null
-
-    const sessionCookie = req.cookies.__session || '';
-
-    // Only attempt session verification if Admin SDK is initialized
-    if (admin.apps.length && authAdmin) {
+// Passport Local Strategy Configuration
+passport.use(new LocalStrategy(
+    { usernameField: 'email' }, // Use 'email' as the username field
+    async (email, password, done) => {
         try {
-            if (sessionCookie) {
-                const decodedClaims = await authAdmin.verifySessionCookie(sessionCookie, true /** checkRevoked */);
-                res.locals.user = await authAdmin.getUser(decodedClaims.uid);
-                // console.log('User authenticated via session cookie:', res.locals.user.email); // Commented out for cleaner logs
+            const user = await User.findOne({ email: email });
+            if (!user) {
+                return done(null, false, { message: 'Incorrect email or password.' });
             }
-        } catch (error) {
-            console.error('Session cookie verification failed:', error.message);
-            res.clearCookie('__session');
+            const isMatch = await user.comparePassword(password);
+            if (!isMatch) {
+                return done(null, false, { message: 'Incorrect email or password.' });
+            }
+            return done(null, user);
+        } catch (err) {
+            return done(err);
         }
-    } else {
-        console.warn('Firebase Admin SDK not fully initialized. Skipping session cookie verification.');
     }
-    // Make BASE_PATH available to EJS templates
+));
+
+// Passport Serialization and Deserialization
+passport.serializeUser((user, done) => {
+    done(null, user.id); // Store user ID in the session
+});
+
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await User.findById(id).select('-password'); // Fetch user by ID, exclude password
+        done(null, user);
+    } catch (err) {
+        done(err);
+    }
+});
+
+// Middleware to make user object and BASE_PATH available to all EJS templates
+app.use((req, res, next) => {
+    res.locals.user = req.user; // Passport adds `req.user` if authenticated
     res.locals.BASE_PATH = BASE_PATH;
     next();
 });
 
-// Middleware to protect routes that require authentication
-const isAuthenticated = (req, res, next) => {
-    if (res.locals.user) {
-        next(); // User is authenticated, proceed
-    } else {
-        // Redirect to login page, ensuring BASE_PATH is prepended
-        res.redirect(`${BASE_PATH}/login`);
+// Middleware to protect routes (ensure user is authenticated)
+function isAuthenticated(req, res, next) {
+    if (req.isAuthenticated()) {
+        return next();
     }
-};
+    res.redirect(`${BASE_PATH}/login`); // Redirect to login if not authenticated
+}
 
-// --- Authentication Routes ---
-// These routes are handled by the Express app directly, so they should be relative to its root ('/')
-app.get('/login', (req, res) => {
-    res.render('login', { firebaseConfig: res.locals.firebaseConfig });
+// --- Routes ---
+
+// Home Page
+app.get(`${BASE_PATH}/`, (req, res) => {
+    res.render('home');
 });
 
-app.get('/register', (req, res) => {
-    res.render('register', { firebaseConfig: res.locals.firebaseConfig });
+// Login Page
+app.get(`${BASE_PATH}/login`, (req, res) => {
+    if (req.isAuthenticated()) {
+        return res.redirect(`${BASE_PATH}/`); // Redirect to home if already logged in
+    }
+    res.render('login');
 });
 
-app.post('/sessionLogin', async (req, res) => {
-    const idToken = req.body.idToken;
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
-
-    if (!admin.apps.length || !authAdmin) {
-        console.error('Firebase Admin SDK not initialized. Cannot create session cookie.');
-        return res.status(500).send(JSON.stringify({ status: 'failed', message: 'Server error: Authentication service not ready.' }));
+// Register Page
+app.get(`${BASE_PATH}/register`, (req, res) => {
+    if (req.isAuthenticated()) {
+        return res.redirect(`${BASE_PATH}/`); // Redirect to home if already logged in
     }
+    res.render('register');
+});
 
+// Handle User Registration
+app.post(`${BASE_PATH}/register`, async (req, res) => {
+    const { email, password } = req.body;
     try {
-        const sessionCookie = await authAdmin.createSessionCookie(idToken, { expiresIn });
-        const options = { maxAge: expiresIn, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' }; // Use 'secure' in production, 'lax' for development
-        res.cookie('__session', sessionCookie, options);
-        res.status(200).send(JSON.stringify({ status: 'success' }));
-    } catch (error) {
-        console.error('Error creating session cookie:', error);
-        res.status(401).send(JSON.stringify({ status: 'failed', message: 'Unauthorized: Session creation failed.' }));
-    }
-});
-
-app.post('/sessionLogout', async (req, res) => {
-    res.clearCookie('__session');
-    if (admin.apps.length && authAdmin && res.locals.user && res.locals.user.uid) {
-        try {
-            await authAdmin.revokeRefreshTokens(res.locals.user.uid);
-            console.log('Refresh tokens revoked for user:', res.locals.user.uid);
-        } catch (error) {
-            console.error('Error revoking refresh tokens:', error);
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).send('Email already in use.');
         }
+        const newUser = new User({ email, password });
+        await newUser.save();
+
+        // Log the user in immediately after registration
+        req.login(newUser, (err) => {
+            if (err) {
+                console.error('Error logging in after registration:', err);
+                return res.status(500).send('Registration successful, but login failed.');
+            }
+            // Redirect to home page after successful registration and login
+            res.redirect(`${BASE_PATH}/`);
+        });
+    } catch (err) {
+        console.error('Error during registration:', err);
+        res.status(500).send('Server Error during registration.');
     }
-    res.status(200).send(JSON.stringify({ status: 'success' }));
 });
 
-// --- Main Routes ---
-// The root of the application as seen by the serverless function (which corresponds to /libraryOfThoughts/ on the public domain)
-app.get('/', (req, res) => {
-    res.render('home', { user: res.locals.user });
-});
+// Handle User Login
+app.post(`${BASE_PATH}/login`, passport.authenticate('local', {
+    successRedirect: `${BASE_PATH}/`,
+    failureRedirect: `${BASE_PATH}/login`, // This will redirect back to login on failure
+    failureFlash: false // We'll handle flash messages manually in the EJS for simplicity
+}));
 
-// --- Content Overview Page ---
-app.get('/content', isAuthenticated, (req, res) => {
-    res.render('content', { user: res.locals.user });
-});
-
-// --- Liturgical Calendar Routes ---
-app.get('/liturgicalCalendar', isAuthenticated, async (req, res) => {
-    const requestedDate = req.query.date || new Date().toISOString().slice(0, 10);
-    const info = liturgicalData[requestedDate];
-
-    let dailyReflections = [];
-    if (admin.apps.length && res.locals.user) {
-        try {
-            const reflectionsRef = db.collection('reflections')
-                                     .where('userId', '==', res.locals.user.uid)
-                                     .where('date', '==', requestedDate);
-            const snapshot = await reflectionsRef.get();
-            dailyReflections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            dailyReflections.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-        } catch (err) {
-            console.error('Error fetching daily reflections:', err);
-        }
-    } else {
-        console.warn('Firestore query skipped: Admin SDK not initialized or user not authenticated.');
-    }
-
-    res.render('liturgicalCalendar', {
-        user: res.locals.user,
-        info: info,
-        dailyReflections: dailyReflections,
-        firebaseConfig: res.locals.firebaseConfig,
-        requestedDate: requestedDate
+// Handle User Logout
+app.post(`${BASE_PATH}/logout`, (req, res, next) => {
+    req.logout((err) => {
+        if (err) { return next(err); }
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('Error destroying session:', err);
+                return next(err);
+            }
+            res.clearCookie('connect.sid'); // Clear the session cookie
+            res.redirect(`${BASE_PATH}/login`);
+        });
     });
 });
 
-// Adds a new daily reflection
-app.post('/liturgicalCalendar/reflect', isAuthenticated, async (req, res) => {
-    const { date, description, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// --- Liturgical Calendar Routes ---
+const liturgicalData = require('./data/liturgical-calendar.json'); // Load static liturgical data
 
+app.get(`${BASE_PATH}/liturgicalCalendar`, isAuthenticated, async (req, res) => {
     try {
-        await db.collection('reflections').add({
-            userId: res.locals.user.uid,
-            date: date,
-            description: description,
-            hashtags: tagsArray,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        const requestedDate = req.query.date || new Date().toISOString().slice(0, 10); // Default to today
+        const info = liturgicalData[requestedDate];
+        
+        // Fetch daily reflections for the current user and selected date
+        const dailyReflections = await Reflection.find({
+            userId: req.user._id,
+            date: requestedDate
+        }).sort({ createdAt: -1 }); // Sort by most recent
+
+        res.render('liturgicalCalendar', {
+            info: info,
+            requestedDate: requestedDate,
+            dailyReflections: dailyReflections
         });
-        // Redirect using BASE_PATH
+    } catch (err) {
+        console.error('Error fetching liturgical calendar:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// Add Daily Reflection
+app.post(`${BASE_PATH}/liturgicalCalendar/reflect`, isAuthenticated, async (req, res) => {
+    try {
+        const { date, description, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+
+        const newReflection = new Reflection({
+            userId: req.user._id,
+            date,
+            description,
+            hashtags: hashtagArray
+        });
+        await newReflection.save();
         res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${date}`);
     } catch (err) {
         console.error('Error adding daily reflection:', err);
@@ -250,53 +225,35 @@ app.post('/liturgicalCalendar/reflect', isAuthenticated, async (req, res) => {
     }
 });
 
-// Displays the edit daily reflection page
-app.get('/liturgicalCalendar/reflect/edit/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Edit Daily Reflection - GET
+app.get(`${BASE_PATH}/liturgicalCalendar/reflect/edit/:id`, isAuthenticated, async (req, res) => {
     try {
-        const reflectionRef = db.collection('reflections').doc(req.params.id);
-        const reflectionDoc = await reflectionRef.get();
-
-        if (!reflectionDoc.exists || reflectionDoc.data().userId !== res.locals.user.uid) {
+        const reflection = await Reflection.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!reflection) {
             return res.status(404).send('Reflection not found or unauthorized');
         }
-
-        res.render('editDailyReflection', {
-            user: res.locals.user,
-            reflection: { id: reflectionDoc.id, ...reflectionDoc.data() },
-            firebaseConfig: res.locals.firebaseConfig
-        });
+        res.render('editDailyReflection', { reflection: reflection, requestedDate: req.query.date });
     } catch (err) {
         console.error('Error fetching reflection for edit:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// Updates a daily reflection
-app.post('/liturgicalCalendar/reflect/update/:id', isAuthenticated, async (req, res) => {
-    const { date, description, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Update Daily Reflection - POST
+app.post(`${BASE_PATH}/liturgicalCalendar/reflect/update/:id`, isAuthenticated, async (req, res) => {
     try {
-        const reflectionRef = db.collection('reflections').doc(req.params.id);
-        const reflectionDoc = await reflectionRef.get();
+        const { description, hashtags, date } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
-        if (!reflectionDoc.exists || reflectionDoc.data().userId !== res.locals.user.uid) {
+        const updatedReflection = await Reflection.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { description, hashtags: hashtagArray, updatedAt: Date.now() },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedReflection) {
             return res.status(404).send('Reflection not found or unauthorized');
         }
-
-        await reflectionRef.update({
-            description: description,
-            hashtags: tagsArray,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${date}`);
     } catch (err) {
         console.error('Error updating daily reflection:', err);
@@ -304,23 +261,15 @@ app.post('/liturgicalCalendar/reflect/update/:id', isAuthenticated, async (req, 
     }
 });
 
-// Deletes a daily reflection
-app.post('/liturgicalCalendar/reflect/delete/:id', isAuthenticated, async (req, res) => {
-    const redirectDate = req.query.date || new Date().toISOString().slice(0, 10);
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Delete Daily Reflection - POST
+app.post(`${BASE_PATH}/liturgicalCalendar/reflect/delete/:id`, isAuthenticated, async (req, res) => {
     try {
-        const reflectionRef = db.collection('reflections').doc(req.params.id);
-        const reflectionDoc = await reflectionRef.get();
-
-        if (!reflectionDoc.exists || reflectionDoc.data().userId !== res.locals.user.uid) {
+        const { date } = req.query; // Get date from query string
+        const deletedReflection = await Reflection.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!deletedReflection) {
             return res.status(404).send('Reflection not found or unauthorized');
         }
-
-        await reflectionRef.delete();
-        // Redirect using BASE_PATH
-        res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${redirectDate}`);
+        res.redirect(`${BASE_PATH}/liturgicalCalendar?date=${date}`);
     } catch (err) {
         console.error('Error deleting daily reflection:', err);
         res.status(500).send('Server Error');
@@ -329,53 +278,39 @@ app.post('/liturgicalCalendar/reflect/delete/:id', isAuthenticated, async (req, 
 
 
 // --- Insights Routes ---
-// Displays the insights page
-app.get('/insights', isAuthenticated, async (req, res) => {
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-    let insights = [];
-    if (!admin.apps.length || !res.locals.user) {
-        console.warn('Firestore query skipped for insights: Admin SDK not initialized or user not authenticated.');
-        return res.render('insights', { user: res.locals.user, insights: [], search: searchQuery });
-    }
+app.get(`${BASE_PATH}/insights`, isAuthenticated, async (req, res) => {
     try {
-        let insightsRef = db.collection('insights').where('userId', '==', res.locals.user.uid);
-        let snapshot = await insightsRef.get();
+        const searchTerm = req.query.search;
+        let query = { userId: req.user._id };
 
-        insights = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Client-side filtering for search query
-        if (searchQuery) {
-            insights = insights.filter(insight =>
-                insight.description.toLowerCase().includes(searchQuery) ||
-                insight.hashtags.some(tag => tag.name.toLowerCase().includes(searchQuery))
-            );
+        if (searchTerm) {
+            // Search by description or hashtag
+            query.$or = [
+                { description: { $regex: searchTerm, $options: 'i' } }, // Case-insensitive search
+                { 'hashtags.name': { $regex: searchTerm.replace(/^#/, ''), $options: 'i' } }
+            ];
         }
-        insights.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
+        const insights = await Insight.find(query).sort({ createdAt: -1 });
+        res.render('insights', { insights: insights, search: searchTerm || '' });
     } catch (err) {
         console.error('Error fetching insights:', err);
+        res.status(500).send('Server Error');
     }
-    res.render('insights', { user: res.locals.user, insights: insights, search: searchQuery });
 });
 
-// Adds a new insight
-app.post('/insightsCreate', isAuthenticated, async (req, res) => {
-    const { description, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Add Insight
+app.post(`${BASE_PATH}/insightsCreate`, isAuthenticated, async (req, res) => {
     try {
-        await db.collection('insights').add({
-            userId: res.locals.user.uid,
-            description: description,
-            hashtags: tagsArray,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        const { description, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+
+        const newInsight = new Insight({
+            userId: req.user._id,
+            description,
+            hashtags: hashtagArray
         });
-        // Redirect using BASE_PATH
+        await newInsight.save();
         res.redirect(`${BASE_PATH}/insights`);
     } catch (err) {
         console.error('Error adding insight:', err);
@@ -383,49 +318,35 @@ app.post('/insightsCreate', isAuthenticated, async (req, res) => {
     }
 });
 
-// Displays the edit insight page
-app.get('/insights/edit/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Edit Insight - GET
+app.get(`${BASE_PATH}/insights/edit/:id`, isAuthenticated, async (req, res) => {
     try {
-        const insightRef = db.collection('insights').doc(req.params.id);
-        const insightDoc = await insightRef.get();
-
-        if (!insightDoc.exists || insightDoc.data().userId !== res.locals.user.uid) {
+        const insight = await Insight.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!insight) {
             return res.status(404).send('Insight not found or unauthorized');
         }
-
-        res.render('editInsight', { user: res.locals.user, insight: { id: insightDoc.id, ...insightDoc.data() } });
+        res.render('editInsight', { insight: insight });
     } catch (err) {
         console.error('Error fetching insight for edit:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// Updates an insight
-app.post('/insights/update/:id', isAuthenticated, async (req, res) => {
-    const { description, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Update Insight - POST
+app.post(`${BASE_PATH}/insights/update/:id`, isAuthenticated, async (req, res) => {
     try {
-        const insightRef = db.collection('insights').doc(req.params.id);
-        const insightDoc = await insightRef.get();
+        const { description, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
-        if (!insightDoc.exists || insightDoc.data().userId !== res.locals.user.uid) {
+        const updatedInsight = await Insight.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { description, hashtags: hashtagArray, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!updatedInsight) {
             return res.status(404).send('Insight not found or unauthorized');
         }
-
-        await insightRef.update({
-            description: description,
-            hashtags: tagsArray,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/insights`);
     } catch (err) {
         console.error('Error updating insight:', err);
@@ -433,21 +354,13 @@ app.post('/insights/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Deletes an insight
-app.post('/insights/delete/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Delete Insight - POST
+app.post(`${BASE_PATH}/insights/delete/:id`, isAuthenticated, async (req, res) => {
     try {
-        const insightRef = db.collection('insights').doc(req.params.id);
-        const insightDoc = await insightRef.get();
-
-        if (!insightDoc.exists || insightDoc.data().userId !== res.locals.user.uid) {
+        const deletedInsight = await Insight.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!deletedInsight) {
             return res.status(404).send('Insight not found or unauthorized');
         }
-
-        await insightRef.delete();
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/insights`);
     } catch (err) {
         console.error('Error deleting insight:', err);
@@ -456,55 +369,40 @@ app.post('/insights/delete/:id', isAuthenticated, async (req, res) => {
 });
 
 // --- Anecdotes Routes ---
-// Displays the anecdotes page
-app.get('/anecdotes', isAuthenticated, async (req, res) => {
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-    let anecdotes = [];
-    if (!admin.apps.length || !res.locals.user) {
-        console.warn('Firestore query skipped for anecdotes: Admin SDK not initialized or user not authenticated.');
-        return res.render('anecdotes', { user: res.locals.user, anecdotes: [], search: searchQuery });
-    }
+app.get(`${BASE_PATH}/anecdotes`, isAuthenticated, async (req, res) => {
     try {
-        let anecdotesRef = db.collection('anecdotes').where('userId', '==', res.locals.user.uid);
-        let snapshot = await anecdotesRef.get();
+        const searchTerm = req.query.search;
+        let query = { userId: req.user._id };
 
-        anecdotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Client-side filtering for search query
-        if (searchQuery) {
-            anecdotes = anecdotes.filter(anecdote =>
-                anecdote.title.toLowerCase().includes(searchQuery) ||
-                anecdote.content.toLowerCase().includes(searchQuery) ||
-                anecdote.hashtags.some(tag => tag.name.toLowerCase().includes(searchQuery))
-            );
+        if (searchTerm) {
+            query.$or = [
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { content: { $regex: searchTerm, $options: 'i' } },
+                { 'hashtags.name': { $regex: searchTerm.replace(/^#/, ''), $options: 'i' } }
+            ];
         }
-        anecdotes.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
+        const anecdotes = await Anecdote.find(query).sort({ createdAt: -1 });
+        res.render('anecdotes', { anecdotes: anecdotes, search: searchTerm || '' });
     } catch (err) {
         console.error('Error fetching anecdotes:', err);
+        res.status(500).send('Server Error');
     }
-    res.render('anecdotes', { user: res.locals.user, anecdotes: anecdotes, search: searchQuery });
 });
 
-// Adds a new anecdote
-app.post('/anecdotes/create', isAuthenticated, async (req, res) => {
-    const { title, content, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Add Anecdote
+app.post(`${BASE_PATH}/anecdotes/create`, isAuthenticated, async (req, res) => {
     try {
-        await db.collection('anecdotes').add({
-            userId: res.locals.user.uid,
-            title: title,
-            content: content,
-            hashtags: tagsArray,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        const { title, content, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+
+        const newAnecdote = new Anecdote({
+            userId: req.user._id,
+            title,
+            content,
+            hashtags: hashtagArray
         });
-        // Redirect using BASE_PATH
+        await newAnecdote.save();
         res.redirect(`${BASE_PATH}/anecdotes`);
     } catch (err) {
         console.error('Error adding anecdote:', err);
@@ -512,50 +410,35 @@ app.post('/anecdotes/create', isAuthenticated, async (req, res) => {
     }
 });
 
-// Displays the edit anecdote page
-app.get('/anecdotes/edit/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Edit Anecdote - GET
+app.get(`${BASE_PATH}/anecdotes/edit/:id`, isAuthenticated, async (req, res) => {
     try {
-        const anecdoteRef = db.collection('anecdotes').doc(req.params.id);
-        const anecdoteDoc = await anecdoteRef.get();
-
-        if (!anecdoteDoc.exists || anecdoteDoc.data().userId !== res.locals.user.uid) {
+        const anecdote = await Anecdote.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!anecdote) {
             return res.status(404).send('Anecdote not found or unauthorized');
         }
-
-        res.render('editAnecdote', { user: res.locals.user, anecdote: { id: anecdoteDoc.id, ...anecdoteDoc.data() } });
+        res.render('editAnecdote', { anecdote: anecdote });
     } catch (err) {
         console.error('Error fetching anecdote for edit:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// Updates an anecdote
-app.post('/anecdotes/update/:id', isAuthenticated, async (req, res) => {
-    const { title, content, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Update Anecdote - POST
+app.post(`${BASE_PATH}/anecdotes/update/:id`, isAuthenticated, async (req, res) => {
     try {
-        const anecdoteRef = db.collection('anecdotes').doc(req.params.id);
-        const anecdoteDoc = await anecdoteRef.get();
+        const { title, content, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
-        if (!anecdoteDoc.exists || anecdoteDoc.data().userId !== res.locals.user.uid) {
+        const updatedAnecdote = await Anecdote.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { title, content, hashtags: hashtagArray, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!updatedAnecdote) {
             return res.status(404).send('Anecdote not found or unauthorized');
         }
-
-        await anecdoteRef.update({
-            title: title,
-            content: content,
-            hashtags: tagsArray,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/anecdotes`);
     } catch (err) {
         console.error('Error updating anecdote:', err);
@@ -563,21 +446,13 @@ app.post('/anecdotes/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Deletes an anecdote
-app.post('/anecdotes/delete/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Delete Anecdote - POST
+app.post(`${BASE_PATH}/anecdotes/delete/:id`, isAuthenticated, async (req, res) => {
     try {
-        const anecdoteRef = db.collection('anecdotes').doc(req.params.id);
-        const anecdoteDoc = await anecdoteRef.get();
-
-        if (!anecdoteDoc.exists || anecdoteDoc.data().userId !== res.locals.user.uid) {
+        const deletedAnecdote = await Anecdote.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!deletedAnecdote) {
             return res.status(404).send('Anecdote not found or unauthorized');
         }
-
-        await anecdoteRef.delete();
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/anecdotes`);
     } catch (err) {
         console.error('Error deleting anecdote:', err);
@@ -585,60 +460,46 @@ app.post('/anecdotes/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
+
 // --- Books Routes ---
-// Displays the books page
-app.get('/books', isAuthenticated, async (req, res) => {
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-    let books = [];
-    if (!admin.apps.length || !res.locals.user) {
-        console.warn('Firestore query skipped for books: Admin SDK not initialized or user not authenticated.');
-        return res.render('books', { user: res.locals.user, books: [], search: searchQuery });
-    }
+app.get(`${BASE_PATH}/books`, isAuthenticated, async (req, res) => {
     try {
-        let booksRef = db.collection('books').where('userId', '==', res.locals.user.uid);
-        let snapshot = await booksRef.get();
+        const searchTerm = req.query.search;
+        let query = { userId: req.user._id };
 
-        books = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Client-side filtering for search query
-        if (searchQuery) {
-            books = books.filter(book =>
-                book.title.toLowerCase().includes(searchQuery) ||
-                book.author.toLowerCase().includes(searchQuery) ||
-                book.notes.toLowerCase().includes(searchQuery) ||
-                book.hashtags.some(tag => tag.name.toLowerCase().includes(searchQuery))
-            );
+        if (searchTerm) {
+            query.$or = [
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { author: { $regex: searchTerm, $options: 'i' } },
+                { notes: { $regex: searchTerm, $options: 'i' } },
+                { 'hashtags.name': { $regex: searchTerm.replace(/^#/, ''), $options: 'i' } }
+            ];
         }
-        books.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
+        const books = await Book.find(query).sort({ createdAt: -1 });
+        res.render('books', { books: books, search: searchTerm || '' });
     } catch (err) {
         console.error('Error fetching books:', err);
+        res.status(500).send('Server Error');
     }
-    res.render('books', { user: res.locals.user, books: books, search: searchQuery });
 });
 
-// Adds a new book
-app.post('/books/create', isAuthenticated, async (req, res) => {
-    const { title, author, notes, link, pdfUrl, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Add Book
+app.post(`${BASE_PATH}/books/create`, isAuthenticated, async (req, res) => {
     try {
-        await db.collection('books').add({
-            userId: res.locals.user.uid,
-            title: title,
-            author: author,
-            notes: notes,
-            link: link,
-            pdfUrl: pdfUrl,
-            hashtags: tagsArray,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        const { title, author, notes, link, pdfUrl, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+
+        const newBook = new Book({
+            userId: req.user._id,
+            title,
+            author,
+            notes,
+            link,
+            pdfUrl,
+            hashtags: hashtagArray
         });
-        // Redirect using BASE_PATH
+        await newBook.save();
         res.redirect(`${BASE_PATH}/books`);
     } catch (err) {
         console.error('Error adding book:', err);
@@ -646,53 +507,35 @@ app.post('/books/create', isAuthenticated, async (req, res) => {
     }
 });
 
-// Displays the edit book page
-app.get('/books/edit/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Edit Book - GET
+app.get(`${BASE_PATH}/books/edit/:id`, isAuthenticated, async (req, res) => {
     try {
-        const bookRef = db.collection('books').doc(req.params.id);
-        const bookDoc = await bookRef.get();
-
-        if (!bookDoc.exists || bookDoc.data().userId !== res.locals.user.uid) {
+        const book = await Book.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!book) {
             return res.status(404).send('Book not found or unauthorized');
         }
-
-        res.render('editBook', { user: res.locals.user, book: { id: bookDoc.id, ...bookDoc.data() } });
+        res.render('editBook', { book: book });
     } catch (err) {
         console.error('Error fetching book for edit:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// Updates a book
-app.post('/books/update/:id', isAuthenticated, async (req, res) => {
-    const { title, author, notes, link, pdfUrl, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Update Book - POST
+app.post(`${BASE_PATH}/books/update/:id`, isAuthenticated, async (req, res) => {
     try {
-        const bookRef = db.collection('books').doc(req.params.id);
-        const bookDoc = await bookRef.get();
+        const { title, author, notes, link, pdfUrl, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
-        if (!bookDoc.exists || bookDoc.data().userId !== res.locals.user.uid) {
+        const updatedBook = await Book.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { title, author, notes, link, pdfUrl, hashtags: hashtagArray, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!updatedBook) {
             return res.status(404).send('Book not found or unauthorized');
         }
-
-        await bookRef.update({
-            title: title,
-            author: author,
-            notes: notes,
-            link: link,
-            pdfUrl: pdfUrl,
-            hashtags: tagsArray,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/books`);
     } catch (err) {
         console.error('Error updating book:', err);
@@ -700,21 +543,13 @@ app.post('/books/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Deletes a book
-app.post('/books/delete/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Delete Book - POST
+app.post(`${BASE_PATH}/books/delete/:id`, isAuthenticated, async (req, res) => {
     try {
-        const bookRef = db.collection('books').doc(req.params.id);
-        const bookDoc = await bookRef.get();
-
-        if (!bookDoc.exists || bookDoc.data().userId !== res.locals.user.uid) {
+        const deletedBook = await Book.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!deletedBook) {
             return res.status(404).send('Book not found or unauthorized');
         }
-
-        await bookRef.delete();
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/books`);
     } catch (err) {
         console.error('Error deleting book:', err);
@@ -723,57 +558,42 @@ app.post('/books/delete/:id', isAuthenticated, async (req, res) => {
 });
 
 // --- Web-Links Routes ---
-// Displays the weblinks page
-app.get('/weblinks', isAuthenticated, async (req, res) => {
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-    let weblinks = [];
-    if (!admin.apps.length || !res.locals.user) {
-        console.warn('Firestore query skipped for weblinks: Admin SDK not initialized or user not authenticated.');
-        return res.render('weblinks', { user: res.locals.user, weblinks: [], search: searchQuery });
-    }
+app.get(`${BASE_PATH}/weblinks`, isAuthenticated, async (req, res) => {
     try {
-        let weblinksRef = db.collection('weblinks').where('userId', '==', res.locals.user.uid);
-        let snapshot = await weblinksRef.get();
+        const searchTerm = req.query.search;
+        let query = { userId: req.user._id };
 
-        weblinks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Client-side filtering for search query
-        if (searchQuery) {
-            weblinks = weblinks.filter(weblink =>
-                weblink.title.toLowerCase().includes(searchQuery) ||
-                weblink.url.toLowerCase().includes(searchQuery) ||
-                weblink.notes.toLowerCase().includes(searchQuery) ||
-                weblink.hashtags.some(tag => tag.name.toLowerCase().includes(searchQuery))
-            );
+        if (searchTerm) {
+            query.$or = [
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { url: { $regex: searchTerm, $options: 'i' } },
+                { notes: { $regex: searchTerm, $options: 'i' } },
+                { 'hashtags.name': { $regex: searchTerm.replace(/^#/, ''), $options: 'i' } }
+            ];
         }
-        weblinks.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
+        const weblinks = await Weblink.find(query).sort({ createdAt: -1 });
+        res.render('weblinks', { weblinks: weblinks, search: searchTerm || '' });
     } catch (err) {
-        console.error('Error fetching weblinks:', err);
+        console.error('Error fetching web-links:', err);
+        res.status(500).send('Server Error');
     }
-    res.render('weblinks', { user: res.locals.user, weblinks: weblinks, search: searchQuery });
 });
 
-// Adds a new web-link
-app.post('/weblinks/create', isAuthenticated, async (req, res) => {
-    const { title, url, notes, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Add Web-Link
+app.post(`${BASE_PATH}/weblinks/create`, isAuthenticated, async (req, res) => {
     try {
-        await db.collection('weblinks').add({
-            userId: res.locals.user.uid,
-            title: title,
-            url: url,
-            notes: notes,
-            hashtags: tagsArray,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        const { title, url, notes, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+
+        const newWeblink = new Weblink({
+            userId: req.user._id,
+            title,
+            url,
+            notes,
+            hashtags: hashtagArray
         });
-        // Redirect using BASE_PATH
+        await newWeblink.save();
         res.redirect(`${BASE_PATH}/weblinks`);
     } catch (err) {
         console.error('Error adding web-link:', err);
@@ -781,51 +601,35 @@ app.post('/weblinks/create', isAuthenticated, async (req, res) => {
     }
 });
 
-// Displays the edit web-link page
-app.get('/weblinks/edit/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Edit Web-Link - GET
+app.get(`${BASE_PATH}/weblinks/edit/:id`, isAuthenticated, async (req, res) => {
     try {
-        const weblinkRef = db.collection('weblinks').doc(req.params.id);
-        const weblinkDoc = await weblinkRef.get();
-
-        if (!weblinkDoc.exists || weblinkDoc.data().userId !== res.locals.user.uid) {
-            return res.status(404).send('Web-link not found or unauthorized');
+        const weblink = await Weblink.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!weblink) {
+            return res.status(404).send('Web-Link not found or unauthorized');
         }
-
-        res.render('editWeblink', { user: res.locals.user, weblink: { id: weblinkDoc.id, ...weblinkDoc.data() } });
+        res.render('editWeblink', { weblink: weblink });
     } catch (err) {
         console.error('Error fetching web-link for edit:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// Updates a web-link
-app.post('/weblinks/update/:id', isAuthenticated, async (req, res) => {
-    const { title, url, notes, hashtags } = req.body;
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Update Web-Link - POST
+app.post(`${BASE_PATH}/weblinks/update/:id`, isAuthenticated, async (req, res) => {
     try {
-        const weblinkRef = db.collection('weblinks').doc(req.params.id);
-        const weblinkDoc = await weblinkRef.get();
+        const { title, url, notes, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
 
-        if (!weblinkDoc.exists || weblinkDoc.data().userId !== res.locals.user.uid) {
-            return res.status(404).send('Web-link not found or unauthorized');
+        const updatedWeblink = await Weblink.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { title, url, notes, hashtags: hashtagArray, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!updatedWeblink) {
+            return res.status(404).send('Web-Link not found or unauthorized');
         }
-
-        await weblinkRef.update({
-            title: title,
-            url: url,
-            notes: notes,
-            hashtags: tagsArray,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/weblinks`);
     } catch (err) {
         console.error('Error updating web-link:', err);
@@ -833,21 +637,13 @@ app.post('/weblinks/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Deletes a web-link
-app.post('/weblinks/delete/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Delete Web-Link - POST
+app.post(`${BASE_PATH}/weblinks/delete/:id`, isAuthenticated, async (req, res) => {
     try {
-        const weblinkRef = db.collection('weblinks').doc(req.params.id);
-        const weblinkDoc = await weblinkRef.get();
-
-        if (!weblinkDoc.exists || weblinkDoc.data().userId !== res.locals.user.uid) {
-            return res.status(404).send('Web-link not found or unauthorized');
+        const deletedWeblink = await Weblink.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!deletedWeblink) {
+            return res.status(404).send('Web-Link not found or unauthorized');
         }
-
-        await weblinkRef.delete();
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/weblinks`);
     } catch (err) {
         console.error('Error deleting web-link:', err);
@@ -855,61 +651,46 @@ app.post('/weblinks/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
+
 // --- Grammar Routes ---
-// Displays the grammar page
-app.get('/grammar', isAuthenticated, async (req, res) => {
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-    let grammarEntries = [];
-    if (!admin.apps.length || !res.locals.user) {
-        console.warn('Firestore query skipped for grammar: Admin SDK not initialized or user not authenticated.');
-        return res.render('grammar', { user: res.locals.user, grammarEntries: [], search: searchQuery });
-    }
+app.get(`${BASE_PATH}/grammar`, isAuthenticated, async (req, res) => {
     try {
-        let grammarRef = db.collection('grammar').where('userId', '==', res.locals.user.uid);
-        let snapshot = await grammarRef.get();
+        const searchTerm = req.query.search;
+        let query = { userId: req.user._id };
 
-        grammarEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Client-side filtering for search query
-        if (searchQuery) {
-            grammarEntries = grammarEntries.filter(entry =>
-                entry.topic.toLowerCase().includes(searchQuery) ||
-                entry.rule.toLowerCase().includes(searchQuery) ||
-                (entry.notes && entry.notes.toLowerCase().includes(searchQuery)) ||
-                (entry.examples && entry.examples.some(ex => ex.toLowerCase().includes(searchQuery))) ||
-                entry.hashtags.some(tag => tag.name.toLowerCase().includes(searchQuery))
-            );
+        if (searchTerm) {
+            query.$or = [
+                { topic: { $regex: searchTerm, $options: 'i' } },
+                { rule: { $regex: searchTerm, $options: 'i' } },
+                { notes: { $regex: searchTerm, $options: 'i' } },
+                { 'hashtags.name': { $regex: searchTerm.replace(/^#/, ''), $options: 'i' } }
+            ];
         }
-        grammarEntries.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
+        const grammarEntries = await Grammar.find(query).sort({ createdAt: -1 });
+        res.render('grammar', { grammarEntries: grammarEntries, search: searchTerm || '' });
     } catch (err) {
         console.error('Error fetching grammar entries:', err);
+        res.status(500).send('Server Error');
     }
-    res.render('grammar', { user: res.locals.user, grammarEntries: grammarEntries, search: searchQuery });
 });
 
-// Adds a new grammar entry
-app.post('/grammar/create', isAuthenticated, async (req, res) => {
-    const { topic, rule, examples, notes, hashtags } = req.body;
-    const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Add Grammar Entry
+app.post(`${BASE_PATH}/grammar/create`, isAuthenticated, async (req, res) => {
     try {
-        await db.collection('grammar').add({
-            userId: res.locals.user.uid,
-            topic: topic,
-            rule: rule,
-            examples: examplesArray,
-            notes: notes,
-            hashtags: tagsArray,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        const { topic, rule, examples, notes, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+        const exampleArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
+
+        const newGrammarEntry = new Grammar({
+            userId: req.user._id,
+            topic,
+            rule,
+            examples: exampleArray,
+            notes,
+            hashtags: hashtagArray
         });
-        // Redirect using BASE_PATH
+        await newGrammarEntry.save();
         res.redirect(`${BASE_PATH}/grammar`);
     } catch (err) {
         console.error('Error adding grammar entry:', err);
@@ -917,53 +698,36 @@ app.post('/grammar/create', isAuthenticated, async (req, res) => {
     }
 });
 
-// Displays the edit grammar entry page
-app.get('/grammar/edit/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Edit Grammar Entry - GET
+app.get(`${BASE_PATH}/grammar/edit/:id`, isAuthenticated, async (req, res) => {
     try {
-        const grammarRef = db.collection('grammar').doc(req.params.id);
-        const grammarDoc = await grammarRef.get();
-
-        if (!grammarDoc.exists || grammarDoc.data().userId !== res.locals.user.uid) {
+        const grammarEntry = await Grammar.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!grammarEntry) {
             return res.status(404).send('Grammar entry not found or unauthorized');
         }
-
-        res.render('editGrammar', { user: res.locals.user, grammarEntry: { id: grammarDoc.id, ...grammarDoc.data() } });
+        res.render('editGrammar', { grammarEntry: grammarEntry });
     } catch (err) {
         console.error('Error fetching grammar entry for edit:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// Updates a grammar entry
-app.post('/grammar/update/:id', isAuthenticated, async (req, res) => {
-    const { topic, rule, examples, notes, hashtags } = req.body;
-    const examplesArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0).map(ex => ex.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')) : []; // Added smart quote replacement
-    const tagsArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
-
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
-
+// Update Grammar Entry - POST
+app.post(`${BASE_PATH}/grammar/update/:id`, isAuthenticated, async (req, res) => {
     try {
-        const grammarRef = db.collection('grammar').doc(req.params.id);
-        const grammarDoc = await grammarRef.get();
+        const { topic, rule, examples, notes, hashtags } = req.body;
+        const hashtagArray = hashtags ? hashtags.split(/[\s,]+/).filter(tag => tag.length > 0).map(tag => ({ name: tag.replace(/^#/, '') })) : [];
+        const exampleArray = examples ? examples.split('\n').map(ex => ex.trim()).filter(ex => ex.length > 0) : [];
 
-        if (!grammarDoc.exists || grammarDoc.data().userId !== res.locals.user.uid) {
+        const updatedGrammarEntry = await Grammar.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { topic, rule, examples: exampleArray, notes, hashtags: hashtagArray, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!updatedGrammarEntry) {
             return res.status(404).send('Grammar entry not found or unauthorized');
         }
-
-        await grammarRef.update({
-            topic: topic,
-            rule: rule,
-            examples: examplesArray,
-            notes: notes,
-            hashtags: tagsArray,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/grammar`);
     } catch (err) {
         console.error('Error updating grammar entry:', err);
@@ -971,21 +735,13 @@ app.post('/grammar/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Deletes a grammar entry
-app.post('/grammar/delete/:id', isAuthenticated, async (req, res) => {
-    if (!admin.apps.length || !res.locals.user) {
-        return res.status(500).send('Server error: Database service not ready or user not authenticated.');
-    }
+// Delete Grammar Entry - POST
+app.post(`${BASE_PATH}/grammar/delete/:id`, isAuthenticated, async (req, res) => {
     try {
-        const grammarRef = db.collection('grammar').doc(req.params.id);
-        const grammarDoc = await grammarRef.get();
-
-        if (!grammarDoc.exists || grammarDoc.data().userId !== res.locals.user.uid) {
+        const deletedGrammarEntry = await Grammar.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!deletedGrammarEntry) {
             return res.status(404).send('Grammar entry not found or unauthorized');
         }
-
-        await grammarRef.delete();
-        // Redirect using BASE_PATH
         res.redirect(`${BASE_PATH}/grammar`);
     } catch (err) {
         console.error('Error deleting grammar entry:', err);
@@ -994,18 +750,28 @@ app.post('/grammar/delete/:id', isAuthenticated, async (req, res) => {
 });
 
 // --- Archives Routes ---
-// Displays the archives overview page
-app.get('/archives', isAuthenticated, async (req, res) => {
-    try {
-        res.render('archives', { user: res.locals.user, firebaseConfig: res.locals.firebaseConfig });
-    } catch (err) {
-        console.error('Error fetching archives page:', err);
-        res.status(500).send('Server Error');
-    }
+app.get(`${BASE_PATH}/archives`, isAuthenticated, (req, res) => {
+    res.render('archives');
 });
 
-// Start the server
+// --- Content Page ---
+app.get(`${BASE_PATH}/content`, isAuthenticated, (req, res) => {
+    res.render('content');
+});
+
+// Catch-all for undefined routes
+app.use((req, res) => {
+    res.status(404).send('Page Not Found');
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Access the application at http://localhost:${PORT}${BASE_PATH}/`);
 });

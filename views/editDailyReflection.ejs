@@ -23,38 +23,31 @@
                 <div class="col-lg-8">
                     <div class="card shadow-sm">
                         <div class="card-header bg-primary text-white">
-                            <i class="fas fa-edit me-2"></i>Edit Daily Reflection for <%= reflection.date.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
+                            <i class="fas fa-edit me-2"></i>Edit Daily Reflection for <%= new Date(reflection.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
                         </div>
                         <div class="card-body">
-                            <form method="post" action="<%= BASE_PATH %>/liturgicalCalendar/reflect/update/<%= reflection.id %>">
-                                <input type="hidden" name="date" value="<%= reflection.date.toDate().toISOString().slice(0, 10) %>">
+                            <form action="<%= BASE_PATH %>/liturgicalCalendar/reflect/update/<%= reflection._id %>" method="POST">
+                                <input type="hidden" name="date" value="<%= new Date(reflection.date).toISOString().slice(0, 10) %>">
                                 <div class="mb-3">
                                     <label for="description" class="form-label">Reflection Description</label>
                                     <textarea class="form-control" id="description" name="description" rows="4" required><%= reflection.description %></textarea>
                                 </div>
-                                
                                 <div class="mb-3">
                                     <label for="hashtags" class="form-label">Hashtags</label>
-                                    <input type="text" class="form-control" id="hashtags" name="hashtags" 
-                                        value="<%= reflection.hashtags.map(tag => `#${tag.name}`).join(' ') %>">
-                                    <div class="form-text">Separate with spaces or commas</div>
+                                    <input type="text" class="form-control" id="hashtags" name="hashtags" value="<%= reflection.hashtags.map(tag => tag.name).join(', ') %>" placeholder="#faith #hope #love (separate with spaces or commas)">
+                                    <div class="form-text">Categorize your reflection for easy retrieval.</div>
                                 </div>
-                                
-                                <div class="d-flex justify-content-between">
-                                    <a href="<%= BASE_PATH %>/liturgicalCalendar?date=<%= reflection.date.toDate().toISOString().slice(0, 10) %>" class="btn btn-outline-secondary">Cancel</a>
-                                    <div>
-                                        <button type="submit" class="btn btn-primary me-2">Update</button>
-                                        <button type="button" class="btn btn-danger delete-reflection-btn" data-id="<%= reflection.id %>" data-date="<%= reflection.date.toDate().toISOString().slice(0, 10) %>">
-                                            <i class="fas fa-trash-alt me-1"></i>Delete
-                                        </button>
-                                    </div>
+                                <div class="d-flex justify-content-end">
+                                    <a href="<%= BASE_PATH %>/liturgicalCalendar?date=<%= new Date(reflection.date).toISOString().slice(0, 10) %>" class="btn btn-outline-secondary me-2">Cancel</a>
+                                    <button type="submit" class="btn btn-primary me-2">Update Reflection</button>
+                                    <button type="button" class="btn btn-danger delete-reflection-btn" data-id="<%= reflection._id %>" data-date="<%= new Date(reflection.date).toISOString().slice(0, 10) %>">Delete</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Delete Confirmation Modal for Daily Reflections -->

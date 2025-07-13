@@ -42,71 +42,69 @@
             </li>
         </ul>
 
-        <!-- Main Content for Content Page -->
-        <main class="container my-5">
-            <div class="p-5 text-center bg-light rounded-3 shadow-lg">
-                <h1 class="display-5 fw-bold text-orange mb-3">Explore Our Content Sections</h1>
-                <p class="fs-5 mb-4 text-muted">
-                    Navigate through various categories of spiritual resources and personal reflections.
-                </p>
+        <!-- Main Content -->
+        <main class="container main-content mt-4">
+            <div class="text-center mb-4">
+                <h2 class="display-5 fw-bold mb-3"><i class="fas fa-folder-open me-3"></i>Your Content Library</h2>
+                <p class="lead text-muted">A centralized place for all your spiritual thoughts and resources.</p>
             </div>
 
-            <div class="row g-4 py-5 row-cols-1 row-cols-md-2 row-cols-lg-3">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-calendar-alt text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Liturgical Calendar</h5>
-                            <p class="card-text text-muted">Daily readings, seasons, and your personal reflections tied to the Church year.</p>
-                            <a href="<%= BASE_PATH %>/liturgicalCalendar" class="btn btn-sm btn-outline-primary">Go to Calendar</a>
+                            <i class="fas fa-calendar-alt text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Liturgical Calendar</h5>
+                            <p class="card-text text-muted">Daily readings, liturgical seasons, and reflections.</p>
+                            <a href="<%= BASE_PATH %>/liturgicalCalendar" class="btn btn-sm btn-outline-primary">View Calendar</a>
                         </div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-lightbulb text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Insights</h5>
-                            <p class="card-text text-muted">General thoughts, spiritual insights, and non-daily reflections.</p>
-                            <a href="<%= BASE_PATH %>/insights" class="btn btn-sm btn-outline-primary">View Insights</a>
+                            <i class="fas fa-lightbulb text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Insights</h5>
+                            <p class="card-text text-muted">Personal spiritual insights and reflections.</p>
+                            <a href="<%= BASE_PATH %>/insights" class="btn btn-sm btn-outline-primary">Explore Insights</a>
                         </div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-book-open text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Anecdotes</h5>
-                            <p class="card-text text-muted">Discover inspiring stories and short narratives that uplift the spirit.</p>
-                            <a href="<%= BASE_PATH %>/anecdotes" class="btn btn-sm btn-outline-primary">View Anecdotes</a>
+                            <i class="fas fa-book-open text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Anecdotes</h5>
+                            <p class="card-text text-muted">Short stories or personal experiences related to your faith.</p>
+                            <a href="<%= BASE_PATH %>/anecdotes" class="btn btn-sm btn-outline-primary">Read Anecdotes</a>
                         </div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-book-reader text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Books</h5>
-                            <p class="card-text text-muted">Find recommendations, PDFs, and notes on spiritual books.</p>
-                            <a href="<%= BASE_PATH %>/books" class="btn btn-sm btn-outline-primary">Browse Books</a>
+                            <i class="fas fa-book-reader text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Books</h5>
+                            <p class="card-text text-muted">Keep track of spiritual books you've read or want to read.</p>
+                            <a href="<%= BASE_PATH %>/books" class="btn btn-sm btn-outline-primary">Manage Books</a>
                         </div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-link text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Web-Links</h5>
-                            <p class="card-text text-muted">Curated list of external spiritual resources and websites.</p>
-                            <a href="<%= BASE_PATH %>/weblinks" class="btn btn-sm btn-outline-primary">Explore Links</a>
+                            <i class="fas fa-link text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Web-Links</h5>
+                            <p class="card-text text-muted">Save and organize useful spiritual websites and articles.</p>
+                            <a href="<%= BASE_PATH %>/weblinks" class="btn btn-sm btn-outline-primary">View Web-Links</a>
                         </div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-language text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Grammar</h5>
+                            <i class="fas fa-language text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Grammar</h5>
                             <p class="card-text text-muted">Resources for understanding biblical languages and theological terms.</p>
                             <a href="<%= BASE_PATH %>/grammar" class="btn btn-sm btn-outline-primary">Study Grammar</a>
                         </div>
@@ -115,8 +113,8 @@
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
-                            <i class="fas fa-archive text-orange mb-3" style="font-size: 2.5rem;"></i>
-                            <h5 class="card-title text-orange">Archives</h5>
+                            <i class="fas fa-archive text-primary-color mb-3" style="font-size: 2.5rem;"></i>
+                            <h5 class="card-title text-primary-color">Archives</h5>
                             <p class="card-text text-muted">Access older insights and custom content that have been archived.</p>
                             <a href="<%= BASE_PATH %>/archives" class="btn btn-sm btn-outline-primary">View Archives</a>
                         </div>

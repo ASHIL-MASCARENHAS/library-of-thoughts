@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/insights.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/insights.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -20,25 +20,25 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs justify-content-center">
             <li class="nav-item">
-                <a class="nav-link" href="/liturgicalCalendar">Liturgical Calendar</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/liturgicalCalendar">Liturgical Calendar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/insights">Insights</a>
+                <a class="nav-link active" aria-current="page" href="<%= BASE_PATH %>/insights">Insights</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/anecdotes">Anecdotes</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/anecdotes">Anecdotes</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/books">Books</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/books">Books</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/weblinks">Web-Links</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/weblinks">Web-Links</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/grammar">Grammar</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/grammar">Grammar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/archives">Archives</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/archives">Archives</a>
             </li>
         </ul>
 
@@ -52,7 +52,7 @@
                             <i class="fas fa-lightbulb me-2"></i>Add New Insight
                         </div>
                         <div class="card-body">
-                            <form action="/insightsCreate" method="POST">
+                            <form action="<%= BASE_PATH %>/insightsCreate" method="POST">
                                 <div class="mb-3">
                                     <label for="description" class="form-label">Insight Description</label>
                                     <textarea class="form-control" id="description" name="description" rows="4" placeholder="Write your insight here..." required></textarea>
@@ -74,7 +74,7 @@
                     <div class="mt-5">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3><i class="fas fa-history me-2 text-primary-color"></i>Previous Insights</h3>
-                            <form class="d-flex" action="/insights" method="GET">
+                            <form class="d-flex" action="<%= BASE_PATH %>/insights" method="GET">
                                 <input type="text" class="form-control form-control-sm me-2" name="search" placeholder="Search insights..." value="<%= typeof search !== 'undefined' ? search : '' %>">
                                 <button type="submit" class="btn btn-sm btn-primary">Search</button>
                             </form>
@@ -87,7 +87,7 @@
                                         <div class="card shadow-sm">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <small class="text-muted"><%= insight.createdAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></small>
+                                                    <small class="text-muted"><%= insight.createdAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></small>
                                                     <div class="hashtags">
                                                         <% insight.hashtags.forEach(tag => { %>
                                                             <span class="badge bg-light text-dark me-1">#<%= tag.name %></span>
@@ -96,7 +96,7 @@
                                                 </div>
                                                 <p class="card-text"><%= insight.description %></p>
                                                 <div class="d-flex justify-content-end mt-3">
-                                                    <a href="/insights/edit/<%= insight.id %>" class="btn btn-sm btn-outline-primary me-2">
+                                                    <a href="<%= BASE_PATH %>/insights/edit/<%= insight.id %>" class="btn btn-sm btn-outline-primary me-2">
                                                         <i class="fas fa-edit me-1"></i>Edit
                                                     </a>
                                                     <button type="button" class="btn btn-sm btn-outline-danger delete-insight-btn" data-id="<%= insight.id %>">
@@ -157,7 +157,7 @@
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const insightId = this.dataset.id;
-                    deleteInsightForm.action = `/insights/delete/${insightId}`;
+                    deleteInsightForm.action = `<%= BASE_PATH %>/insights/delete/${insightId}`;
                     deleteInsightModal.show();
                 });
             });

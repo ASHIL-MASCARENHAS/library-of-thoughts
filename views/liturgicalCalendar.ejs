@@ -181,7 +181,7 @@
                                         <div class="card shadow-sm">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <small class="text-muted"><%= reflection.createdAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></small>
+                                                    <small class="text-muted"><%= reflection.createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></small>
                                                     <div class="hashtags">
                                                         <% reflection.hashtags.forEach(tag => { %>
                                                             <span class="badge bg-light text-dark me-1">#<%= tag.name %></span>
@@ -190,10 +190,10 @@
                                                 </div>
                                                 <p class="card-text"><%= reflection.description %></p>
                                                 <div class="d-flex justify-content-end mt-3">
-                                                    <a href="<%= BASE_PATH %>/liturgicalCalendar/reflect/edit/<%= reflection.id %>?date=<%= requestedDate %>" class="btn btn-sm btn-outline-primary me-2">
+                                                    <a href="<%= BASE_PATH %>/liturgicalCalendar/reflect/edit/<%= reflection._id %>?date=<%= requestedDate %>" class="btn btn-sm btn-outline-primary me-2">
                                                         <i class="fas fa-edit me-1"></i>Edit
                                                     </a>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger delete-reflection-btn" data-id="<%= reflection.id %>" data-date="<%= requestedDate %>">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger delete-reflection-btn" data-id="<%= reflection._id %>" data-date="<%= requestedDate %>">
                                                         <i class="fas fa-trash-alt me-1"></i>Delete
                                                     </button>
                                                 </div>
@@ -272,9 +272,6 @@
                     case 'easter':
                         colorClass = 'liturgical-white';
                         break;
-                    // The original code had 'martyr' and 'passion' here, which are not seasons.
-                    // Assuming these were meant for specific celebration colors, not season badges.
-                    // If they are meant to be season-like, please clarify.
                     case 'red': // Assuming 'red' might be a season color in some contexts
                         colorClass = 'liturgical-red';
                         break;
@@ -293,10 +290,9 @@
             });
 
             // Apply liturgical colors to celebration badges
-            // This is for the badges within the "Celebrations" section
             const colorBadges = document.querySelectorAll('.liturgical-color-preview');
             colorBadges.forEach(badge => {
-                const color = badge.dataset.color; // Assuming you add data-color to these spans in the EJS
+                const color = badge.style.backgroundColor; // Get color from inline style
                 let colorClass = '';
                 switch (color) {
                     case 'violet':
@@ -337,7 +333,6 @@
             deleteReflectionButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const reflectionId = this.dataset.id;
-                    // Ensure reflectionDate is correctly passed for the delete action
                     const reflectionDate = this.dataset.date; 
                     deleteReflectionForm.action = `<%= BASE_PATH %>/liturgicalCalendar/reflect/delete/${reflectionId}?date=${reflectionDate}`;
                     deleteReflectionModal.show();

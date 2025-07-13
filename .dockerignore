@@ -1,0 +1,15 @@
+# Node.js specific ignores
+node_modules
+npm-debug.log
+.env.development # If you have separate dev .env, exclude it. Keep .env for production.
+
+# Editor and OS specific ignores
+.vscode/
+.git/
+.gitignore
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+Thumbs.db

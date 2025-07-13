@@ -7,8 +7,8 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/home.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/styles.css">
+    <link rel="stylesheet" href="<%= BASE_PATH %>/css/home.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -20,25 +20,25 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs justify-content-center">
             <li class="nav-item">
-                <a class="nav-link" href="/liturgicalCalendar">Liturgical Calendar</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/liturgicalCalendar">Liturgical Calendar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/insights">Insights</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/insights">Insights</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/anecdotes">Anecdotes</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/anecdotes">Anecdotes</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/books">Books</a>
+                <a class="nav-link active" aria-current="page" href="<%= BASE_PATH %>/books">Books</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/weblinks">Web-Links</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/weblinks">Web-Links</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/grammar">Grammar</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/grammar">Grammar</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/archives">Archives</a>
+                <a class="nav-link" href="<%= BASE_PATH %>/archives">Archives</a>
             </li>
         </ul>
 
@@ -52,7 +52,7 @@
                             <i class="fas fa-plus me-2"></i>Add New Book
                         </div>
                         <div class="card-body">
-                            <form action="/books/create" method="POST">
+                            <form action="<%= BASE_PATH %>/books/create" method="POST">
                                 <div class="mb-3">
                                     <label for="title" class="form-label">Book Title</label>
                                     <input type="text" class="form-control" id="title" name="title" placeholder="e.g., The Screwtape Letters" required>
@@ -91,7 +91,7 @@
                     <div class="mt-5">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3><i class="fas fa-book-reader me-2 text-primary-color"></i>Your Books</h3>
-                            <form class="d-flex" action="/books" method="GET">
+                            <form class="d-flex" action="<%= BASE_PATH %>/books" method="GET">
                                 <input type="text" class="form-control form-control-sm me-2" name="search" placeholder="Search books..." value="<%= typeof search !== 'undefined' ? search : '' %>">
                                 <button type="submit" class="btn btn-sm btn-primary">Search</button>
                             </form>
@@ -104,7 +104,7 @@
                                         <div class="card shadow-sm">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <h5 class="card-title mb-0"><%= book.title %></h5>
+                                                    <h5 class="card-title mb-0"><a href="<%= book.link || book.pdfUrl || '#' %>" target="_blank" class="text-decoration-none text-primary"><%= book.title %> <% if (book.link || book.pdfUrl) { %><i class="fas fa-external-link-alt fa-xs ms-1"></i><% } %></a></h5>
                                                     <small class="text-muted">by <%= book.author %></small>
                                                 </div>
                                                 <p class="card-text mb-2"><%= book.notes.substring(0, 150) %><% if (book.notes.length > 150) { %>...<% } %></p>
@@ -128,7 +128,7 @@
                                                     <% }); %>
                                                 </div>
                                                 <div class="d-flex justify-content-end">
-                                                    <a href="/books/edit/<%= book.id %>" class="btn btn-sm btn-outline-primary me-2">
+                                                    <a href="<%= BASE_PATH %>/books/edit/<%= book.id %>" class="btn btn-sm btn-outline-primary me-2">
                                                         <i class="fas fa-edit me-1"></i>Edit
                                                     </a>
                                                     <button type="button" class="btn btn-sm btn-outline-danger delete-book-btn" data-id="<%= book.id %>">
@@ -189,7 +189,7 @@
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const bookId = this.dataset.id;
-                    deleteBookForm.action = `/books/delete/${bookId}`;
+                    deleteBookForm.action = `<%= BASE_PATH %>/books/delete/${bookId}`;
                     deleteBookModal.show();
                 });
             });

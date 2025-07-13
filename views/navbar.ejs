@@ -28,8 +28,8 @@
                                 <i class="fas fa-user-circle me-1"></i><%= user.email || 'Profile' %>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                                <li><a class="dropdown-item" href="#">Settings</a></li>
-                                <li><hr class="dropdown-divider"></li>
+                                <!-- <li><a class="dropdown-item" href="#">Settings</a></li> -->
+                                <!-- <li><hr class="dropdown-divider"></li> -->
                                 <li><a class="dropdown-item" href="#" id="logout-button">Logout</a></li>
                             </ul>
                         </div>
@@ -44,107 +44,29 @@
     </div>
 </nav>
 
-<!-- Hidden script tag to pass Firebase config as JSON -->
-<script id="firebase-config-data" type="application/json">
-    <%- JSON.stringify(firebaseConfig) %>
-</script>
-
-<script type="module">
-    // Firebase SDK imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-
-    // Retrieve Firebase config from the hidden script tag
-    const firebaseConfigElement = document.getElementById('firebase-config-data');
-    let firebaseConfig = {};
-    if (firebaseConfigElement && firebaseConfigElement.textContent) {
-        try {
-            firebaseConfig = JSON.parse(firebaseConfigElement.textContent);
-        } catch (e) {
-            console.error('Error parsing Firebase config from EJS:', e);
-        }
-    }
-
-    console.log('Using Firebase Config (navbar):', firebaseConfig);
-
-    let auth;
-    let db;
-    let app;
-
-    // Initialize Firebase if config is valid
-    if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-        app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-
-        // Listen for authentication state changes
-        onAuthStateChanged(auth, async (user) => {
-            const authStatusContainer = document.getElementById('auth-status-container');
-            if (authStatusContainer) {
-                if (user) {
-                    // User is signed in: Update UI to show profile/email
-                    authStatusContainer.innerHTML = `
-                        <div class="dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle me-1"></i>${user.email || 'Profile'}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                                <li><a class="dropdown-item" href="#">Settings</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" id="logout-button">Logout</a></li>
-                            </ul>
-                        </div>
-                    `;
-                    // Attach logout event listener
-                    document.getElementById('logout-button')?.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        try {
-                            await signOut(auth); // Sign out from Firebase client
-                            // Use BASE_PATH for the sessionLogout fetch call
-                            await fetch('<%= BASE_PATH %>/sessionLogout', { method: 'POST' }); // Notify server to clear session cookie
-                            window.location.href = '<%= BASE_PATH %>/login'; // Redirect to login after logout
-                        } catch (error) {
-                            console.error('Error signing out:', error);
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const logoutButton = document.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                    const response = await fetch('<%= BASE_PATH %>/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
                         }
                     });
 
-                    // Refresh and send ID token to server to maintain session
-                    try {
-                        const idToken = await user.getIdToken(true); // true forces a refresh
-                        // Use BASE_PATH for the sessionLogin fetch call
-                        await fetch('<%= BASE_PATH %>/sessionLogin', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ idToken })
-                        });
-                        console.log('Session cookie updated with fresh ID token.');
-                    } catch (error) {
-                        console.error('Error refreshing or setting session cookie:', error);
+                    if (response.ok) {
+                        window.location.href = '<%= BASE_PATH %>/login';
+                    } else {
+                        console.error('Logout failed on server side.');
                     }
-
-                } else {
-                    // User is signed out: show sign-in button
-                    authStatusContainer.innerHTML = `
-                        <a class="btn btn-outline-primary btn-sm px-3" href="<%= BASE_PATH %>/login">
-                            <i class="fas fa-sign-in-alt me-1"></i>Sign In
-                        </a>
-                    `;
-
-                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                    if (!initialAuthToken && !user) {
-                         signInAnonymously(auth)
-                            .then((anonUserCredential) => {
-                                console.log('Signed in anonymously (no existing user):', anonUserCredential.user.uid);
-                            })
-                            .catch((error) => {
-                                console.error('Error signing in anonymously (no existing user):', error);
-                            });
-                    }
+                } catch (error) {
+                    console.error('Error during logout fetch:', error);
                 }
-            }
-        });
-    } else {
-        console.error('Firebase client config is incomplete or missing. Firebase will not be initialized. Please ensure your .env file is correctly set up and passed from the server, or that __firebase_config is available in the Canvas environment.');
-    }
+            });
+        }
+    });
 </script>

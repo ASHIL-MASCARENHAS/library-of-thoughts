@@ -55,28 +55,28 @@
                             <form action="<%= BASE_PATH %>/books/create" method="POST">
                                 <div class="mb-3">
                                     <label for="title" class="form-label">Book Title</label>
-                                    <input type="text" class="form-control" id="title" name="title" placeholder="e.g., The Screwtape Letters" required>
+                                    <input type="text" class="form-control" id="title" name="title" placeholder="e.g., The Imitation of Christ" required>
                                 </div>
                                 <div class="mb-3">
                                     <label for="author" class="form-label">Author</label>
-                                    <input type="text" class="form-control" id="author" name="author" placeholder="e.g., C.S. Lewis" required>
+                                    <input type="text" class="form-control" id="author" name="author" placeholder="e.g., Thomas à Kempis" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="notes" class="form-label">Notes/Summary</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Your thoughts, key takeaways, or summary..."></textarea>
+                                    <label for="notes" class="form-label">Notes (Optional)</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Your thoughts or key takeaways from the book..."></textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="link" class="form-label">External Link (Optional)</label>
+                                    <label for="link" class="form-label">Purchase Link (Optional)</label>
                                     <input type="url" class="form-control" id="link" name="link" placeholder="e.g., https://www.amazon.com/book-title">
                                 </div>
                                 <div class="mb-3">
                                     <label for="pdfUrl" class="form-label">PDF Link (Optional)</label>
                                     <input type="url" class="form-control" id="pdfUrl" name="pdfUrl" placeholder="e.g., https://example.com/book.pdf">
-                                    <div class="form-text">Link to a hosted PDF file.</div>
+                                    <div class="form-text">Link to a digital copy if available.</div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="hashtags" class="form-label">Hashtags</label>
-                                    <input type="text" class="form-control" id="hashtags" name="hashtags" placeholder="#theology #fiction #spiritualgrowth (separate with spaces or commas)">
+                                    <input type="text" class="form-control" id="hashtags" name="hashtags" placeholder="#spiritual #theology #devotional (separate with spaces or commas)">
                                     <div class="form-text">Categorize your books for easy searching.</div>
                                 </div>
                                 <div class="d-flex justify-content-end">
@@ -104,20 +104,20 @@
                                         <div class="card shadow-sm">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <h5 class="card-title mb-0"><a href="<%= book.link || book.pdfUrl || '#' %>" target="_blank" class="text-decoration-none text-primary"><%= book.title %> <% if (book.link || book.pdfUrl) { %><i class="fas fa-external-link-alt fa-xs ms-1"></i><% } %></a></h5>
+                                                    <h5 class="card-title mb-0"><%= book.title %></h5>
                                                     <small class="text-muted">by <%= book.author %></small>
                                                 </div>
                                                 <p class="card-text mb-2"><%= book.notes.substring(0, 150) %><% if (book.notes.length > 150) { %>...<% } %></p>
                                                 <% if (book.link || book.pdfUrl) { %>
-                                                    <div class="d-flex align-items-center mb-2">
+                                                    <div class="mb-2">
                                                         <% if (book.link) { %>
-                                                            <a href="<%= book.link %>" target="_blank" class="me-2 text-decoration-none">
-                                                                <i class="fas fa-external-link-alt me-1"></i>Link
+                                                            <a href="<%= book.link %>" target="_blank" class="btn btn-sm btn-outline-info me-2">
+                                                                <i class="fas fa-external-link-alt me-1"></i>Purchase
                                                             </a>
                                                         <% } %>
                                                         <% if (book.pdfUrl) { %>
-                                                            <a href="<%= book.pdfUrl %>" target="_blank" class="text-decoration-none">
-                                                                <i class="fas fa-file-pdf me-1"></i>PDF
+                                                            <a href="<%= book.pdfUrl %>" target="_blank" class="btn btn-sm btn-outline-success">
+                                                                <i class="fas fa-file-pdf me-1"></i>Read PDF
                                                             </a>
                                                         <% } %>
                                                     </div>
@@ -128,10 +128,10 @@
                                                     <% }); %>
                                                 </div>
                                                 <div class="d-flex justify-content-end">
-                                                    <a href="<%= BASE_PATH %>/books/edit/<%= book.id %>" class="btn btn-sm btn-outline-primary me-2">
+                                                    <a href="<%= BASE_PATH %>/books/edit/<%= book._id %>" class="btn btn-sm btn-outline-primary me-2">
                                                         <i class="fas fa-edit me-1"></i>Edit
                                                     </a>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger delete-book-btn" data-id="<%= book.id %>">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger delete-book-btn" data-id="<%= book._id %>">
                                                         <i class="fas fa-trash-alt me-1"></i>Delete
                                                     </button>
                                                 </div>
@@ -144,7 +144,7 @@
                             <div class="reflection-placeholder">
                                 <i class="fas fa-book-reader"></i>
                                 <h4>No books found</h4>
-                                <p class="mb-0">Start cataloging your spiritual library!</p>
+                                <p class="mb-0">Start adding your favorite spiritual books here!</p>
                             </div>
                         <% } %>
                     </div>
