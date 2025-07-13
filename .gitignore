@@ -1,7 +1,7 @@
 # Environment variables
 .env
 
-# Firebase Admin SDK private key
+# Firebase Admin SDK private key [earlier before mongodb, i used this, i was just lazy to delete it hence included here :)]
 serviceAccountKey.json
 
 # Node modules
@@ -15,6 +15,3 @@ yarn-error.log*
 # OS generated files
 .DS_Store
 .vscode/
-
-# liturgicalCalendar-data
-data/
